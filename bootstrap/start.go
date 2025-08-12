@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"goumang-master/route"
+	"goumang-master/services/cron"
 	"path"
 
 	"github.com/bpcoder16/Chestnut/v2/appconfig"
@@ -25,7 +26,12 @@ func Start(ctx context.Context, config *appconfig.AppConfig) error {
 			gin.HTTPHandler(
 				route.Api(),
 			),
-		).Run()
+		).Run(ctx)
+	})
+
+	g.Go(func() error {
+		cron.Run(ctx)
+		return nil
 	})
 
 	return g.Wait()

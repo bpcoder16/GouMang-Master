@@ -11,10 +11,11 @@ logDir: ""
 notUseRotateLog: false
 StdRedirectFileSupport: true
 DefaultMySQLSupport: false
+DefaultSQLiteSupport: true
 DefaultClickhouseSupport: false
 DefaultRedisSupport: false
 DefaultMongoDBSupport: false
 AliyunOSSSupport: false
 UseLRUCache: false
 QueueSize: 10000
-ConsumerSize: 1000
+ConsumerSize: 0
