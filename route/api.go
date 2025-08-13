@@ -3,10 +3,10 @@ package route
 import (
 	"fmt"
 	"goumang-master/db"
-	"goumang-master/services/cron"
 	"net/http"
 	"time"
 
+	"github.com/bpcoder16/Chestnut/v2/contrib/cron"
 	"github.com/bpcoder16/Chestnut/v2/contrib/httphandler/gin"
 	"github.com/bpcoder16/Chestnut/v2/sqlite"
 	gin2 "github.com/gin-gonic/gin"

@@ -3,12 +3,12 @@ package bootstrap
 import (
 	"context"
 	"goumang-master/route"
-	"goumang-master/services/cron"
 	"path"
 
 	"github.com/bpcoder16/Chestnut/v2/appconfig"
 	"github.com/bpcoder16/Chestnut/v2/appconfig/env"
 	"github.com/bpcoder16/Chestnut/v2/bootstrap"
+	"github.com/bpcoder16/Chestnut/v2/contrib/cron"
 	"github.com/bpcoder16/Chestnut/v2/contrib/httphandler/gin"
 	"github.com/bpcoder16/Chestnut/v2/core/gtask"
 	"github.com/bpcoder16/Chestnut/v2/modules/httpserver"
