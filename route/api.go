@@ -8,7 +8,7 @@ import (
 
 	"github.com/bpcoder16/Chestnut/v2/contrib/cron"
 	"github.com/bpcoder16/Chestnut/v2/contrib/httphandler/gin"
-	"github.com/bpcoder16/Chestnut/v2/sqlite"
+	"github.com/bpcoder16/Chestnut/v2/default/sqlite"
 	gin2 "github.com/gin-gonic/gin"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"
@@ -19,7 +19,7 @@ func Api() gin.Router {
 
 	apiRouter.GET("/task-list", func(ctx *gin2.Context) {
 		var taskList []db.GMTask
-		err := sqlite.DB().WithContext(ctx).Find(&taskList).Error
+		err := sqlite.DefaultClient().WithContext(ctx).Find(&taskList).Error
 
 		ctx.JSON(http.StatusOK, gin2.H{
 			"taskList": taskList,

@@ -1,21 +1,29 @@
 env:
   appName: "GouMang-Master"
+  # debug 调试 / test 测试 / release 线上发布
   runMode: "debug"
   timeLocation: "Asia/Shanghai"
-  configDirName: "conf"
+  configDirName: ""
 
 filterKeys:
   - "password"
 
-logDir: ""
-notUseRotateLog: false
-StdRedirectFileSupport: true
-DefaultMySQLSupport: false
-DefaultSQLiteSupport: true
-DefaultClickhouseSupport: false
-DefaultRedisSupport: false
-DefaultMongoDBSupport: false
-AliyunOSSSupport: false
-UseLRUCache: false
-QueueSize: 10000
-ConsumerSize: 0
+log:
+  logDir: ""
+  useRotateLog: true
+  stdRedirectFileSupport: true
+
+default:
+  MySQLSupport: false
+  SQLiteSupport: true
+  ClickhouseSupport: false
+  RedisSupport: false
+  MongoDBSupport: false
+  LRUCacheSupport: false
+  AliyunOSSSupport: false
+
+asyncService:
+  Support: false
+  QueueSize: 10000
+  ConsumerSize: 1000
+  TaskMaxRetryCnt: 3

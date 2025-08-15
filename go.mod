@@ -5,7 +5,7 @@ go 1.23.7
 //replace github.com/bpcoder16/Chestnut/v2 v2.1.32 => ../Chestnut
 
 require (
-	github.com/bpcoder16/Chestnut/v2 v2.1.39
+	github.com/bpcoder16/Chestnut/v2 v2.1.45
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-co-op/gocron/v2 v2.16.3
 	github.com/google/uuid v1.6.0
