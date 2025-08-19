@@ -24,8 +24,6 @@ func MustInit(ctx context.Context, config *appconfig.AppConfig) {
 	default:
 		global.DefaultDB = sqlite.DefaultClient()
 	}
-
-	initDB()
 }
 
 func loadAppBizConfig() {
