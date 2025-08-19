@@ -33,4 +33,5 @@ go.work.sum
 
 conf/
 log/
-data/
+data/version
+data/manager.db
