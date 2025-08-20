@@ -1,6 +1,8 @@
 package route
 
 import (
+	"goumang-master/db"
+	"goumang-master/services/tasks"
 	"net/http"
 
 	"github.com/bpcoder16/Chestnut/v2/contrib/httphandler/gin"
@@ -13,6 +15,13 @@ func Api() gin.Router {
 	apiRouter := gin.NewDefaultRouter("/api")
 
 	apiRouter.GET("/test", func(ctx *gin2.Context) {
+		taskUUID := uuid.New()
+		tasks.CreateJob(ctx, db.GMTask{
+			UUID:   taskUUID.String(),
+			Title:  "TestImmediately",
+			Type:   db.TypeOneTimeJobStartImmediately,
+			Method: db.MethodTest,
+		})
 		ctx.JSON(http.StatusOK, map[string]interface{}{
 			"uuid":   uuid.New(),
 			"sha256": utils.SHA265String("1_16 */30 * * * *_1_"),

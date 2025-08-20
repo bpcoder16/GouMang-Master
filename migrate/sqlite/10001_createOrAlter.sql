@@ -11,6 +11,7 @@ CREATE TABLE gm_tasks (
     method INTEGER NOT NULL DEFAULT 1,
     method_params TEXT NOT NULL DEFAULT '',
     status INTEGER NOT NULL DEFAULT 1,
+    error_message TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL DEFAULT 0,
     updated_at INTEGER NOT NULL DEFAULT 0
 );
