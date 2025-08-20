@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"goumang-master/db"
 	"goumang-master/global"
+	"strconv"
+	"time"
 
 	"github.com/bpcoder16/Chestnut/v2/appconfig/env"
 	"github.com/bpcoder16/Chestnut/v2/contrib/cron"
@@ -29,9 +31,20 @@ func InitJobs(ctx context.Context) {
 	logit.Context(ctx).InfoW("Cron.InitJobs.Count", len(cron.Jobs()))
 }
 
-func IsValidCrontab(expression string) (err error) {
+func IsValidCrontabExpression(expression string) (err error) {
 	p := robfigCron.NewParser(robfigCron.SecondOptional | robfigCron.Minute | robfigCron.Hour | robfigCron.Dom | robfigCron.Month | robfigCron.Dow | robfigCron.Descriptor)
 	withLocation := fmt.Sprintf("CRON_TZ=%s %s", env.TimeLocation().String(), expression)
 	_, err = p.Parse(withLocation)
+	return
+}
+
+func IsValidDurationExpression(expression string) (durationMillisecond time.Duration, err error) {
+	var durationMillisecondInt int
+	durationMillisecondInt, err = strconv.Atoi(expression)
+	if err != nil {
+		return
+	}
+
+	durationMillisecond = time.Duration(durationMillisecondInt) * time.Millisecond
 	return
 }

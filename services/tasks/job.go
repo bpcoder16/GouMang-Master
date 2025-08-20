@@ -15,13 +15,19 @@ import (
 func getJobDefinition(_ context.Context, dbTask db.GMTask) (jobDefinition gocron.JobDefinition, err error) {
 	switch dbTask.Type {
 	case db.TypeCron:
-		if err = IsValidCrontab(dbTask.Expression); err != nil {
+		if err = IsValidCrontabExpression(dbTask.Expression); err != nil {
 			return
 		}
 		jobDefinition = gocron.CronJob(
 			dbTask.Expression,
 			true,
 		)
+	case 2:
+		if durationMillisecond, errD := IsValidDurationExpression(dbTask.Expression); errD != nil {
+			err = errD
+		} else {
+			jobDefinition = gocron.DurationJob(durationMillisecond)
+		}
 	default:
 		err = errors.New("invalid task, type: " + strconv.FormatUint(uint64(dbTask.Type), 10))
 	}
