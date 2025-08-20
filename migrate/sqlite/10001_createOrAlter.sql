@@ -1,6 +1,8 @@
+-- 创建 gm_tasks 任务配置表
 CREATE TABLE gm_tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     uuid TEXT NOT NULL DEFAULT '',
+    sha256 TEXT NOT NULL DEFAULT '',
     user_id INTEGER NOT NULL DEFAULT 0,
     title TEXT NOT NULL DEFAULT '',
     desc TEXT NOT NULL DEFAULT '',

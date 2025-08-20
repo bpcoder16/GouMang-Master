@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"goumang-master/global"
+	"goumang-master/services/tasks"
 	"path"
 
 	"github.com/bpcoder16/Chestnut/v2/appconfig"
@@ -24,6 +25,8 @@ func MustInit(ctx context.Context, config *appconfig.AppConfig) {
 	default:
 		global.DefaultDB = sqlite.DefaultClient()
 	}
+
+	tasks.InitJobs(ctx)
 }
 
 func loadAppBizConfig() {
