@@ -48,6 +48,10 @@ func reloadTaskListTask(masterTask db.GMTask) (task gocron.Task) {
 		}
 
 		logit.Context(ctx).DebugW("Cron.reloadTaskListTask.dbTaskList.Count", len(dbTaskList))
+		jobList := cron.Jobs()
+		if len(jobList) == 0 && len(jobList) == 0 {
+			return
+		}
 
 		dbTaskMap := make(map[string]db.GMTask, len(dbTaskList))
 		for _, dbTaskTmp := range dbTaskList {
@@ -55,7 +59,6 @@ func reloadTaskListTask(masterTask db.GMTask) (task gocron.Task) {
 		}
 		dbTaskList = nil
 
-		jobList := cron.Jobs()
 		jobMap := make(map[string]gocron.Job, len(jobList))
 		for _, job := range jobList {
 			if job.ID().String() == masterTask.UUID {

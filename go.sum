@@ -8,10 +8,8 @@ github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible h1:8psS8a+wKfiLt1iVDX79F
 github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible/go.mod h1:T/Aws4fEfogEE9v+HPhhw+CntffsBHJ8nXQCwKr0/g8=
 github.com/andybalholm/brotli v1.1.1 h1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=
 github.com/andybalholm/brotli v1.1.1/go.mod h1:05ib4cKhjx3OQYUY22hTVd34Bc8upXjOLL2rKwwZBoA=
-github.com/bpcoder16/Chestnut/v2 v2.1.50-0.20250820021319-a48d4ea971d9 h1:HnFr23+8yB3YNqX5F+sYLgqRqAC2y58E+7g1pksTfL0=
-github.com/bpcoder16/Chestnut/v2 v2.1.50-0.20250820021319-a48d4ea971d9/go.mod h1:9d6lt97Zui4gcllQ/ihX4smawpVDIAEgpYJSzJ0JS0w=
-github.com/bpcoder16/Chestnut/v2 v2.1.50-0.20250820022852-d0116ce4e704 h1:sh6Kja34w+YLpw+d3hdXsr7QYAtnopB2iGP+RDfw02M=
-github.com/bpcoder16/Chestnut/v2 v2.1.50-0.20250820022852-d0116ce4e704/go.mod h1:9d6lt97Zui4gcllQ/ihX4smawpVDIAEgpYJSzJ0JS0w=
+github.com/bpcoder16/Chestnut/v2 v2.1.50-0.20250820081254-76e0a67414f1 h1:sVYy0jy4qHyw30BQd+iw+thLzzk8vACkiuAJ+g+9PQ4=
+github.com/bpcoder16/Chestnut/v2 v2.1.50-0.20250820081254-76e0a67414f1/go.mod h1:9d6lt97Zui4gcllQ/ihX4smawpVDIAEgpYJSzJ0JS0w=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
 github.com/bsm/ginkgo/v2 v2.12.0/go.mod h1:SwYbGRRDovPVboqFv0tPTcG1sN61LM1Z4ARdbAV9g4c=
 github.com/bsm/gomega v1.27.10 h1:yeMWxP2pV2fG3FgAODIY8EiRE3dy0aeFYt4l7wh6yKA=

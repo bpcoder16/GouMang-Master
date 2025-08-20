@@ -5,9 +5,11 @@ go 1.23.7
 //replace github.com/bpcoder16/Chestnut/v2 v2.1.48 => ../Chestnut
 
 require (
-	github.com/bpcoder16/Chestnut/v2 v2.1.50-0.20250820022852-d0116ce4e704
+	github.com/bpcoder16/Chestnut/v2 v2.1.50-0.20250820081254-76e0a67414f1
 	github.com/gin-gonic/gin v1.10.1
+	github.com/go-co-op/gocron/v2 v2.16.3
 	github.com/google/uuid v1.6.0
+	github.com/robfig/cron/v3 v3.0.1
 	gorm.io/gorm v1.30.1
 )
 
@@ -26,7 +28,6 @@ require (
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/go-co-op/gocron/v2 v2.16.3 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -58,7 +59,6 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/redis/go-redis/v9 v9.12.1 // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
