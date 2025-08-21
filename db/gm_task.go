@@ -30,11 +30,11 @@ func (GMTask) TableName() string {
 }
 
 const (
-	StatusDeleted         = -3 // 删除
-	StatusDownstreamError = -2
-	StatusConfigError     = -1
-	StatusPending         = 1 // 待启用
-	StatusEnabled         = 2 // 已启用
+	StatusDeleted       = -3 // 删除
+	StatusConfigExpired = -2 // 配置超时下线
+	StatusConfigError   = -1 // 配置异常
+	StatusPending       = 1  // 待启用
+	StatusEnabled       = 2  // 已启用
 
 	TypeCron                       = 1
 	TypeDuration                   = 2

@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"context"
-	"errors"
 	"goumang-master/db"
 	"strconv"
 
@@ -12,10 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
-func getJobDefinition(_ context.Context, dbTask db.GMTask) (jobDefinition gocron.JobDefinition, err error) {
+func getJobDefinition(ctx context.Context, dbTask db.GMTask) (jobDefinition gocron.JobDefinition, err error) {
 	switch dbTask.Type {
 	case db.TypeCron:
-		if err = IsValidCrontabExpression(dbTask.Expression); err != nil {
+		if err = IsValidCrontabExpression(ctx, dbTask.Expression); err != nil {
 			return
 		}
 		jobDefinition = gocron.CronJob(
@@ -23,13 +22,13 @@ func getJobDefinition(_ context.Context, dbTask db.GMTask) (jobDefinition gocron
 			true,
 		)
 	case db.TypeDuration:
-		if durationMillisecond, errD := IsValidDurationExpression(dbTask.Expression); errD != nil {
+		if durationMillisecond, errD := IsValidDurationExpression(ctx, dbTask.Expression); errD != nil {
 			err = errD
 		} else {
 			jobDefinition = gocron.DurationJob(durationMillisecond)
 		}
 	case db.TypeDurationRandom:
-		if minDurationMillisecond, maxDurationMillisecond, errD := IsValidDurationRandomExpression(dbTask.Expression); errD != nil {
+		if minDurationMillisecond, maxDurationMillisecond, errD := IsValidDurationRandomExpression(ctx, dbTask.Expression); errD != nil {
 			err = errD
 		} else {
 			jobDefinition = gocron.DurationRandomJob(minDurationMillisecond, maxDurationMillisecond)
@@ -39,7 +38,7 @@ func getJobDefinition(_ context.Context, dbTask db.GMTask) (jobDefinition gocron
 			gocron.OneTimeJobStartImmediately(),
 		)
 	case db.TypeOneTimeJobStartDateTimes:
-		if startAtList, errD := IsValidOneTimeJobStartDateTimesExpression(dbTask.Expression); errD != nil {
+		if startAtList, errD := IsValidOneTimeJobStartDateTimesExpression(ctx, dbTask.Expression); errD != nil {
 			err = errD
 		} else {
 			jobDefinition = gocron.OneTimeJob(
@@ -47,7 +46,8 @@ func getJobDefinition(_ context.Context, dbTask db.GMTask) (jobDefinition gocron
 			)
 		}
 	default:
-		err = errors.New("invalid task, type: " + strconv.FormatUint(uint64(dbTask.Type), 10))
+		logit.Context(ctx).WarnW("getJobDefinition.Err", "["+strconv.FormatUint(uint64(dbTask.Type), 10)+"] "+notSupportedTaskTypeErr.Error())
+		err = notSupportedTaskTypeErr
 	}
 	return
 }
@@ -62,12 +62,9 @@ func getJobOptionList(ctx context.Context, taskUUID uuid.UUID, dbTask db.GMTask)
 }
 
 func CreateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error) {
-	logit.Context(ctx).DebugW("Cron.CreateJob.dbTask", dbTask)
-
 	var taskUUID uuid.UUID
-	taskUUID, err = uuid.Parse(dbTask.UUID)
+	taskUUID, err = isValidTaskUUID(ctx, dbTask.UUID)
 	if err != nil {
-		err = errors.New("invalid.task.uuid")
 		return
 	}
 
@@ -76,6 +73,7 @@ func CreateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error
 	if err != nil {
 		return
 	}
+
 	var task gocron.Task
 	task, err = getTask(ctx, dbTask)
 	if err != nil {
@@ -88,7 +86,55 @@ func CreateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error
 		getJobOptionList(ctx, taskUUID, dbTask)...,
 	)
 	if err == nil {
-		logit.Context(ctx).DebugW("Cron.CreateJob", "Created:"+dbTask.Title)
+		logit.Context(ctx).DebugW("Cron.CreateJob", "Created: "+dbTask.Title)
 	}
+	return
+}
+
+func UpdateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error) {
+	var taskUUID uuid.UUID
+	taskUUID, err = isValidTaskUUID(ctx, dbTask.UUID)
+	if err != nil {
+		return
+	}
+
+	var jobDefinition gocron.JobDefinition
+	jobDefinition, err = getJobDefinition(ctx, dbTask)
+	if err != nil {
+		return
+	}
+
+	var task gocron.Task
+	task, err = getTask(ctx, dbTask)
+	if err != nil {
+		return
+	}
+
+	job, err = cron.Update(
+		taskUUID,
+		jobDefinition,
+		task,
+		getJobOptionList(ctx, taskUUID, dbTask)...,
+	)
+	if err == nil {
+		logit.Context(ctx).DebugW("Cron.UpdateJob", "Updated: "+dbTask.Title)
+	}
+	return
+}
+
+func RemoveJobForJob(ctx context.Context, job gocron.Job) (err error) {
+	err = cron.RemoveJob(job.ID())
+	logit.Context(ctx).DebugW("Cron.reloadTaskListTask", "Removed: "+job.Name())
+	return
+}
+
+func RemoveJobForDBTask(ctx context.Context, dbTask db.GMTask) (err error) {
+	var taskUUID uuid.UUID
+	taskUUID, err = isValidTaskUUID(ctx, dbTask.UUID)
+	if err != nil {
+		return
+	}
+	err = cron.RemoveJob(taskUUID)
+	logit.Context(ctx).DebugW("Cron.reloadTaskListTask", "Removed: "+dbTask.Title)
 	return
 }

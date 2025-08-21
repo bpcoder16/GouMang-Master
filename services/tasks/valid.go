@@ -9,6 +9,7 @@ import (
 
 	"github.com/bpcoder16/Chestnut/v2/appconfig/env"
 	"github.com/bpcoder16/Chestnut/v2/logit"
+	"github.com/google/uuid"
 	robfigCron "github.com/robfig/cron/v3"
 )
 
@@ -17,7 +18,7 @@ func IsValidCrontabExpression(ctx context.Context, expression string) (err error
 	withLocation := fmt.Sprintf("CRON_TZ=%s %s", env.TimeLocation().String(), expression)
 	_, err = p.Parse(withLocation)
 	if err != nil {
-		logit.Context(ctx).WarnW("IsValidCrontabExpression.Err", "["+expression+"]"+err.Error())
+		logit.Context(ctx).WarnW("IsValidCrontabExpression.Err", "["+expression+"] "+err.Error())
 		return crontabExpressionErr
 	}
 	return
@@ -27,7 +28,7 @@ func IsValidDurationExpression(ctx context.Context, expression string) (duration
 	var durationMillisecondInt int
 	durationMillisecondInt, err = strconv.Atoi(expression)
 	if err != nil {
-		logit.Context(ctx).WarnW("IsValidDurationExpression.Err", "["+expression+"]"+err.Error())
+		logit.Context(ctx).WarnW("IsValidDurationExpression.Err", "["+expression+"] "+err.Error())
 		err = durationExpressionErr
 		return
 	}
@@ -36,25 +37,29 @@ func IsValidDurationExpression(ctx context.Context, expression string) (duration
 	return
 }
 
-func IsValidDurationRandomExpression(expression string) (minDurationMillisecond, maxDurationMillisecond time.Duration, err error) {
+func IsValidDurationRandomExpression(ctx context.Context, expression string) (minDurationMillisecond, maxDurationMillisecond time.Duration, err error) {
 	expressionList := strings.Split(expression, ",")
 	if len(expressionList) != 2 {
-		err = errors.New("[" + expression + "]invalid expression")
+		logit.Context(ctx).WarnW("IsValidDurationRandomExpression.Err", "["+expression+"] invalid expression")
+		err = durationRandomExpressionErr
 		return
 	}
 	var minDurationMillisecondInt, maxDurationMillisecondInt int
 	minDurationMillisecondInt, err = strconv.Atoi(expressionList[0])
 	if err != nil {
-		err = errors.New("[" + expression + "]" + err.Error())
+		logit.Context(ctx).WarnW("IsValidDurationRandomExpression.Err", "["+expression+"] "+err.Error())
+		err = durationRandomExpressionErr
 		return
 	}
 	maxDurationMillisecondInt, err = strconv.Atoi(expressionList[1])
 	if err != nil {
-		err = errors.New("[" + expression + "]" + err.Error())
+		logit.Context(ctx).WarnW("IsValidDurationRandomExpression.Err", "["+expression+"] "+err.Error())
+		err = durationRandomExpressionErr
 		return
 	}
 	if minDurationMillisecondInt >= maxDurationMillisecondInt || minDurationMillisecondInt <= 0 || maxDurationMillisecondInt <= 0 {
-		err = errors.New("[" + expression + "]invalid expression")
+		logit.Context(ctx).WarnW("IsValidDurationRandomExpression.Err", "["+expression+"] invalid expression")
+		err = durationRandomExpressionErr
 		return
 	}
 	minDurationMillisecond = time.Duration(minDurationMillisecondInt) * time.Millisecond
@@ -62,10 +67,11 @@ func IsValidDurationRandomExpression(expression string) (minDurationMillisecond,
 	return
 }
 
-func IsValidOneTimeJobStartDateTimesExpression(expression string) (timeList []time.Time, err error) {
+func IsValidOneTimeJobStartDateTimesExpression(ctx context.Context, expression string) (timeList []time.Time, err error) {
 	expressionList := strings.Split(expression, ",")
 	if len(expressionList) == 0 {
-		err = errors.New("[" + expression + "]invalid expression")
+		logit.Context(ctx).WarnW("IsValidOneTimeJobStartDateTimesExpression.Err", "["+expression+"] invalid expression")
+		err = oneTimeJobStartDateTimesExpressionErr
 		return
 	}
 
@@ -73,7 +79,8 @@ func IsValidOneTimeJobStartDateTimesExpression(expression string) (timeList []ti
 	for _, timeStr := range expressionList {
 		startAt, errT := time.ParseInLocation(time.DateTime, timeStr, env.TimeLocation())
 		if errT != nil {
-			err = errors.New("[" + expression + "]" + errT.Error())
+			logit.Context(ctx).WarnW("IsValidOneTimeJobStartDateTimesExpression.Err", "["+expression+"] "+errT.Error())
+			err = oneTimeJobStartDateTimesExpressionErr
 			return
 		}
 		timeList = append(timeList, startAt)
@@ -86,8 +93,19 @@ func IsValidOneTimeJobStartDateTimesExpression(expression string) (timeList []ti
 		}
 	}
 	if maxTime.Before(time.Now()) {
-		err = errors.New("[" + expression + "]max time is too early")
+		logit.Context(ctx).WarnW("IsValidOneTimeJobStartDateTimesExpression.Err", "["+expression+"] max time is too early")
+		err = oneTimeJobStartDateTimesExpressionExpired
+		return
 	}
 
+	return
+}
+
+func isValidTaskUUID(ctx context.Context, uuidStr string) (taskUUID uuid.UUID, err error) {
+	taskUUID, err = uuid.Parse(uuidStr)
+	if err != nil {
+		logit.Context(ctx).WarnW("uuidParseErr", "["+uuidStr+"] "+err.Error())
+		err = dbTaskUUIDInvalidErr
+	}
 	return
 }
