@@ -58,6 +58,28 @@ func getJobOptionList(ctx context.Context, taskUUID uuid.UUID, dbTask db.GMTask)
 		gocron.WithName(dbTask.Title + taskNameDelimiter + dbTask.SHA256),
 		gocron.WithSingletonMode(gocron.LimitModeReschedule), // LimitModeReschedule 重新调度模式(无法执行跳过等待下次周期尝试) LimitModeWait 等待模式(放入队列等待执行)
 		gocron.WithIdentifier(taskUUID),
+		gocron.WithEventListeners(
+			gocron.BeforeJobRuns(func(jobID uuid.UUID, jobName string) {
+				logit.DebugW("BeforeJobRuns.jobID", jobID, "jobName", jobName)
+			}),
+			gocron.BeforeJobRunsSkipIfBeforeFuncErrors(func(jobID uuid.UUID, jobName string) error {
+				logit.DebugW("BeforeJobRunsSkipIfBeforeFuncErrors.jobID", jobID, "jobName", jobName)
+				return nil
+			}),
+			gocron.AfterJobRuns(func(jobID uuid.UUID, jobName string) {
+				logit.DebugW("AfterJobRuns.jobID", jobID, "jobName", jobName)
+			}),
+
+			gocron.AfterJobRunsWithError(func(jobID uuid.UUID, jobName string, err error) {
+				logit.ErrorW("AfterJobRunsWithError.jobID", jobID, "jobName", jobName, "error", err)
+			}),
+			gocron.AfterJobRunsWithPanic(func(jobID uuid.UUID, jobName string, recoverData any) {
+				logit.ErrorW("AfterJobRunsWithPanic.jobID", jobID, "jobName", jobName, "recoverData", recoverData)
+			}),
+			//gocron.AfterLockError(func(jobID uuid.UUID, jobName string, err error) {
+			//	logit.DebugW("AfterLockError.jobID", jobID, "uuid.UUID", jobName, "error", err)
+			//}),
+		),
 	}
 }
 

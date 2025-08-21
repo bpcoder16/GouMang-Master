@@ -32,8 +32,9 @@ func getTask(ctx context.Context, dbTask db.GMTask) (task gocron.Task, err error
 }
 
 func testTask(masterTask db.GMTask) (task gocron.Task) {
-	task = gocron.NewTask(func(ctx context.Context) {
+	task = gocron.NewTask(func(ctx context.Context) error {
 		logit.Context(ctx).DebugW("Cron.testTask", masterTask.Title+".Run")
+		return notSupportedTaskMethodErr
 	})
 	return
 }
@@ -101,14 +102,15 @@ func loadTaskListTask(ctx context.Context, dbTaskList []db.GMTask, exceptUUID st
 }
 
 func reloadTaskListTask(masterTask db.GMTask) (task gocron.Task) {
-	task = gocron.NewTask(func(ctx context.Context) {
+	task = gocron.NewTask(func(ctx context.Context) error {
 		var dbTaskList []db.GMTask
 		if err := global.DefaultDB.WithContext(ctx).Where("status = ? and id != ?", db.StatusEnabled, masterTask.ID).
 			Order("id asc").Find(&dbTaskList).Error; err != nil {
 			logit.Context(ctx).ErrorW("Cron.reloadTaskListTask.dbTaskList.Err", err.Error())
-			return
+			return err
 		}
 		loadTaskListTask(ctx, dbTaskList, masterTask.UUID)
+		return notSupportedTaskMethodErr
 	})
 	return
 }
