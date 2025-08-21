@@ -2,10 +2,10 @@ module goumang-master
 
 go 1.23.7
 
-//replace github.com/bpcoder16/Chestnut/v2 v2.1.48 => ../Chestnut
+//replace github.com/bpcoder16/Chestnut/v2 v2.1.50-0.20250821050717-5569e8889cfe => ../Chestnut
 
 require (
-	github.com/bpcoder16/Chestnut/v2 v2.1.50-0.20250820081254-76e0a67414f1
+	github.com/bpcoder16/Chestnut/v2 v2.1.50-0.20250821051657-422d3c413953
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-co-op/gocron/v2 v2.16.3
 	github.com/google/uuid v1.6.0

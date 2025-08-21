@@ -1,0 +1,10 @@
+master:
+  host: "192.168.50.202"
+  port: 3306
+  database: "goumang"
+  charset: "utf8mb4"
+  username: "root"
+  password: "P@ssw0rd"
+  maxIdleConns: 10
+  maxOpenConns: 100
+slaves: []
