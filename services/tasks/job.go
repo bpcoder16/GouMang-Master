@@ -2,8 +2,11 @@ package tasks
 
 import (
 	"context"
+	"errors"
 	"goumang-master/db"
+	"goumang-master/global"
 	"strconv"
+	"time"
 
 	"github.com/bpcoder16/Chestnut/v2/contrib/cron"
 	"github.com/bpcoder16/Chestnut/v2/logit"
@@ -59,23 +62,21 @@ func getJobOptionList(ctx context.Context, taskUUID uuid.UUID, dbTask db.GMTask)
 		gocron.WithSingletonMode(gocron.LimitModeReschedule), // LimitModeReschedule 重新调度模式(无法执行跳过等待下次周期尝试) LimitModeWait 等待模式(放入队列等待执行)
 		gocron.WithIdentifier(taskUUID),
 		gocron.WithEventListeners(
-			gocron.BeforeJobRuns(func(jobID uuid.UUID, jobName string) {
-				logit.DebugW("BeforeJobRuns.jobID", jobID, "jobName", jobName)
-			}),
-			gocron.BeforeJobRunsSkipIfBeforeFuncErrors(func(jobID uuid.UUID, jobName string) error {
-				logit.DebugW("BeforeJobRunsSkipIfBeforeFuncErrors.jobID", jobID, "jobName", jobName)
-				return nil
-			}),
-			gocron.AfterJobRuns(func(jobID uuid.UUID, jobName string) {
-				logit.DebugW("AfterJobRuns.jobID", jobID, "jobName", jobName)
-			}),
+			// Job 执行前执行
+			gocron.BeforeJobRuns(beforeJobRunsFunc(ctx)),
 
-			gocron.AfterJobRunsWithError(func(jobID uuid.UUID, jobName string, err error) {
-				logit.ErrorW("AfterJobRunsWithError.jobID", jobID, "jobName", jobName, "error", err)
-			}),
-			gocron.AfterJobRunsWithPanic(func(jobID uuid.UUID, jobName string, recoverData any) {
-				logit.ErrorW("AfterJobRunsWithPanic.jobID", jobID, "jobName", jobName, "recoverData", recoverData)
-			}),
+			// Job 执行前执行，抛出 error 可打断执行
+			gocron.BeforeJobRunsSkipIfBeforeFuncErrors(beforeJobRunsSkipIfBeforeFuncErrorsFunc(ctx)),
+
+			// Job 执行后执行
+			gocron.AfterJobRuns(afterJobRunsFunc(ctx)),
+
+			// Job 执行后执行，接收 Error
+			gocron.AfterJobRunsWithError(afterJobRunsWithErrorFunc(ctx)),
+
+			// Job 执行后执行，接收 Panic
+			gocron.AfterJobRunsWithPanic(afterJobRunsWithPanicFunc(ctx)),
+
 			//gocron.AfterLockError(func(jobID uuid.UUID, jobName string, err error) {
 			//	logit.DebugW("AfterLockError.jobID", jobID, "uuid.UUID", jobName, "error", err)
 			//}),
@@ -107,6 +108,18 @@ func CreateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error
 		task,
 		getJobOptionList(ctx, taskUUID, dbTask)...,
 	)
+	if err != nil {
+		return
+	}
+
+	var nextRunTime time.Time
+	if nextRunTime, err = job.NextRun(); err != nil {
+		return
+	}
+
+	dbTask.NextRunTime = nextRunTime.UnixNano() / 1e6
+	dbTask.UpdatedAt = time.Now().UnixNano() / 1e6
+	err = global.DefaultDB.WithContext(ctx).Save(&dbTask).Error
 	if err == nil {
 		logit.Context(ctx).DebugW("Cron.CreateJob", "Created: "+dbTask.Title)
 	}
@@ -158,5 +171,17 @@ func RemoveJobForDBTask(ctx context.Context, dbTask db.GMTask) (err error) {
 	}
 	err = cron.RemoveJob(taskUUID)
 	logit.Context(ctx).DebugW("Cron.reloadTaskListTask", "Removed: "+dbTask.Title)
+	return
+}
+
+func GetJob(jobID string) (job gocron.Job, err error) {
+	jobList := cron.Jobs()
+	for _, jobTmp := range jobList {
+		if jobID == jobTmp.ID().String() {
+			job = jobTmp
+			return
+		}
+	}
+	err = errors.New("job not found")
 	return
 }

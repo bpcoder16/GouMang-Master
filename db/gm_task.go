@@ -19,12 +19,12 @@ type GMTask struct {
 	Expression   string `gorm:"column:expression"`    // 任务表达式
 	Method       uint8  `gorm:"column:method"`        // 任务执行方式 1 自有任务(刷新用户配置的任务列表)
 	MethodParams string `gorm:"column:method_params"` // 任务执行方式参数
-	NextRunTime  uint64 `gorm:"column:next_run_time"` // 下一次执行时间(毫秒)
+	NextRunTime  int64  `gorm:"column:next_run_time"` // 下一次执行时间(毫秒)
 	Editable     int8   `gorm:"column:editable"`      // 是否可编辑 [当执行过一次后,就不可再编辑 Method&MethodParams]
 	Status       int8   `gorm:"column:status"`        // -4 删除 -3 下游服务异常 -2 配置超时下线 -1 配置异常 1 待启用/下线 2 已启用
 	ErrorMessage string `gorm:"column:error_message"`
-	CreatedAt    uint64 `gorm:"column:created_at"` // 创建时间(秒)
-	UpdatedAt    uint64 `gorm:"column:updated_at"` // 更新时间(秒)
+	CreatedAt    int64  `gorm:"column:created_at"` // 创建时间(秒)
+	UpdatedAt    int64  `gorm:"column:updated_at"` // 更新时间(秒)
 }
 
 func (GMTask) TableName() string {

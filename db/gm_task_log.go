@@ -7,11 +7,11 @@ type GMTaskLog struct {
 	TaskType       uint8  `gorm:"column:task_type"`       // 任务执行类型	1:cron(* * * * * *) 2:duration[单位为毫秒](10) 3:durationRandom[单位为毫秒](10,50)
 	TaskExpression string `gorm:"column:task_expression"` // 任务表达式
 	NodeID         uint64 `gorm:"column:node_id"`
-	StartedAt      uint64 `gorm:"column:started_at"` // 开始时间(毫秒)
-	EndedAt        uint64 `gorm:"column:ended_at"`   // 结束时间(毫秒)
+	StartedAt      int64  `gorm:"column:started_at"` // 开始时间(毫秒)
+	EndedAt        int64  `gorm:"column:ended_at"`   // 结束时间(毫秒)
 	RunStatus      int8   `gorm:"column:run_status"` // 1 进行中 2 成功 2 失败
-	CreatedAt      uint64 `gorm:"column:created_at"` // 创建时间
-	UpdatedAt      uint64 `gorm:"column:updated_at"` // 更新时间
+	CreatedAt      int64  `gorm:"column:created_at"` // 创建时间
+	UpdatedAt      int64  `gorm:"column:updated_at"` // 更新时间
 }
 
 func (GMTaskLog) TableName() string {
