@@ -1,1 +1,1 @@
-gormDBDriver: ""
+gormDBDriver: "mysql"

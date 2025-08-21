@@ -14,8 +14,8 @@ log:
   stdRedirectFileSupport: false
 
 default:
-  MySQLSupport: false
-  SQLiteSupport: true
+  MySQLSupport: true
+  SQLiteSupport: false
   ClickhouseSupport: false
   RedisSupport: false
   MongoDBSupport: false
@@ -33,4 +33,4 @@ migrateService:
   Support: true
   DefaultVersion: 10000
   FileVersionSaveDir: "./data"
-  MigrateSQLFileDir: "./migrate/sqlite"
+  MigrateSQLFileDir: "./migrate/mysql"
