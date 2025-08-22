@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	taskNameDelimiter = "X_|_X"
+	taskNameDelimiter = "|X_|_X|"
 )
 
 func getTask(ctx context.Context, dbTask db.GMTask) (task gocron.Task, err error) {
