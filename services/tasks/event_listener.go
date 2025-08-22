@@ -69,33 +69,18 @@ func afterJobRunsFunc(ctx context.Context) func(jobID uuid.UUID, jobName string)
 		} else {
 			_ = updateDBTaskNextRunTime(ctx, job, true)
 		}
-
-		//
-		//var logList []db.GMTaskLog
-		//if err := global.DefaultDB.WithContext(ctx).
-		//	Where("task_id = ? and run_status = ?", task.ID, db.RunStatusRunning).Find(&logList).Error; err != nil {
-		//	return
-		//}
-		//
-		//idList := make([]uint64, 0, len(logList))
-		//for _, log := range logList {
-		//	idList = append(idList, log.ID)
-		//}
-		//
-		//nowAt := time.Now().UnixNano() / 1e6
-		//
-		//global.DefaultDB.WithContext(ctx).Where("id in ?", idList).Model(&db.GMTaskLog{}).Updates(map[string]interface{}{
-		//	"run_status": db.RunStatusSuccess,
-		//	"ended_at":   nowAt,
-		//	"updated_at": nowAt,
-		//})
-		//
 	}
 }
 
 // Job 执行后执行，接收 Error
 func afterJobRunsWithErrorFunc(ctx context.Context) func(jobID uuid.UUID, jobName string, err error) {
 	return func(jobID uuid.UUID, jobName string, err error) {
+		if job, errJ := GetJob(jobID.String()); errJ != nil {
+			return
+		} else {
+			_ = updateDBTaskNextRunTime(ctx, job, false)
+		}
+		// TODO 修改错误日志
 		logit.Context(ctx).ErrorW("AfterJobRunsWithError.jobID", jobID, "jobName", jobName, "error", err)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/bpcoder16/Chestnut/v2/contrib/cron"
+	"github.com/bpcoder16/Chestnut/v2/core/utils"
 	"github.com/bpcoder16/Chestnut/v2/logit"
 	"github.com/go-co-op/gocron/v2"
 )
@@ -33,18 +34,26 @@ func getTask(ctx context.Context, dbTask db.GMTask) (task gocron.Task, err error
 }
 
 func initJobNextRunTime() (task gocron.Task) {
-	task = gocron.NewTask(func(ctx context.Context) {
+	task = gocron.NewTask(func(ctx context.Context) (err error) {
 		jobList := cron.Jobs()
 		for _, job := range jobList {
 			_ = updateDBTaskNextRunTime(ctx, job, false)
 		}
+		return
 	})
 	return
 }
 
 func testTask(masterTask db.GMTask) (task gocron.Task) {
-	task = gocron.NewTask(func(ctx context.Context) {
+	task = gocron.NewTask(func(ctx context.Context) (err error) {
 		logit.Context(ctx).DebugW("Cron.testTask", masterTask.Title+".Run")
+		switch utils.RandIntN(3) {
+		case 1:
+			err = errors.New("test")
+		case 2:
+			panic("test")
+		}
+		return
 	})
 	return
 }
