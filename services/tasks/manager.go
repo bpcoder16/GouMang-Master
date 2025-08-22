@@ -4,6 +4,8 @@ import (
 	"context"
 	"goumang-master/db"
 	"goumang-master/global"
+
+	"github.com/google/uuid"
 )
 
 func InitJobs(ctx context.Context) {
@@ -14,4 +16,11 @@ func InitJobs(ctx context.Context) {
 	}
 
 	loadTaskListTask(ctx, dbTaskList, "")
+	_, _ = CreateJob(ctx, db.GMTask{
+		UUID:   uuid.New().String(),
+		SHA256: "Immediately",
+		Title:  "initJobNextRunTime",
+		Type:   db.TypeOneTimeJobStartImmediately,
+		Method: db.MethodInitJobNextRunTime,
+	})
 }

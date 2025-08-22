@@ -52,9 +52,9 @@ const (
 	TypeOneTimeJobStartImmediately uint8 = 4
 	TypeOneTimeJobStartDateTimes   uint8 = 5
 
-	MethodTest           uint8 = 0
-	MethodReloadTaskList uint8 = 1
-	MethodShell          uint8 = 2
+	MethodTest               uint8 = 0
+	MethodReloadTaskList     uint8 = 1
+	MethodInitJobNextRunTime uint8 = 2
 )
 
 func BuildSHA256(task GMTask) string {

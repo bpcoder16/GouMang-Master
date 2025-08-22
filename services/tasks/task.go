@@ -23,10 +23,22 @@ func getTask(ctx context.Context, dbTask db.GMTask) (task gocron.Task, err error
 		task = testTask(dbTask)
 	case db.MethodReloadTaskList:
 		task = reloadTaskListTask(dbTask)
+	case db.MethodInitJobNextRunTime:
+		task = initJobNextRunTime()
 	default:
 		logit.Context(ctx).WarnW("getTask.Err", "["+strconv.FormatUint(uint64(dbTask.Method), 10)+"] "+notSupportedTaskMethodErr.Error())
 		err = notSupportedTaskMethodErr
 	}
+	return
+}
+
+func initJobNextRunTime() (task gocron.Task) {
+	task = gocron.NewTask(func(ctx context.Context) {
+		jobList := cron.Jobs()
+		for _, job := range jobList {
+			_ = updateDBTaskNextRunTime(ctx, job, false)
+		}
+	})
 	return
 }
 
