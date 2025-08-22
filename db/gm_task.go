@@ -15,13 +15,13 @@ type GMTask struct {
 	Title        string `gorm:"column:title"`         // 任务标题
 	Tag          string `gorm:"column:tag"`           // 标签
 	Desc         string `gorm:"column:desc"`          // 任务描述
-	Type         uint8  `gorm:"column:type"`          // 任务执行类型	1:cron(* * * * * *) 2:duration[单位为毫秒](10) 3:durationRandom[单位为毫秒](10,50)
-	Expression   string `gorm:"column:expression"`    // 任务表达式
-	Method       uint8  `gorm:"column:method"`        // 任务执行方式 1 自有任务(刷新用户配置的任务列表)
-	MethodParams string `gorm:"column:method_params"` // 任务执行方式参数
+	Type         int8   `gorm:"column:type"`          // 执行方式
+	Expression   string `gorm:"column:expression"`    // 执行方式表达式
+	Method       int8   `gorm:"column:method"`        // 任务方式
+	MethodParams string `gorm:"column:method_params"` // 任务方式参数
 	NextRunTime  int64  `gorm:"column:next_run_time"` // 下一次执行时间(时间戳:毫秒)
 	Editable     int8   `gorm:"column:editable"`      // 是否可编辑 [当执行过一次后,就不可再编辑 Method&MethodParams]
-	Status       int8   `gorm:"column:status"`        // -4 删除 -3 下游服务异常 -2 配置超时下线 -1 配置异常 1 待启用/下线 2 已启用
+	Status       int8   `gorm:"column:status"`        // 状态
 	ErrorMessage string `gorm:"column:error_message"`
 	CreatedAt    int64  `gorm:"column:created_at;autoCreateTime"` // 创建时间(时间戳:秒)
 	UpdatedAt    int64  `gorm:"column:updated_at;autoUpdateTime"` // 更新时间(时间戳:秒)
@@ -32,29 +32,56 @@ func (GMTask) TableName() string {
 }
 
 const (
-	EditableYes int8 = 1
-	EditableNo  int8 = 2
+	NotChoose = 0
 
-	RunStatusRunning int8 = 1
-	RunStatusSuccess int8 = 2
-	RunStatusFailure int8 = 3
+	// 执行方式
+	TypeOneTimeJobStartImmediately int8 = -1 // (系统) 立即执行
+	TypeCron                       int8 = 1  // 定时任务 [* * * * * *]
+	TypeDuration                   int8 = 2  // 时间间隔, 单位:毫秒 [1000]
+	TypeDurationRandom             int8 = 3  // 随机时间间隔, 单位:毫秒 [2000, 5000]
+	TypeOneTimeJobStartDateTimes   int8 = 4  // 指定时间 [2025-08-22 10:00:00,2025-09-22 22:00:00]
 
-	StatusDeleted            int8 = -4 // 删除
-	StatusWorkerServiceError int8 = -3 // 下游服务异常
-	StatusConfigExpired      int8 = -2 // 配置超时下线
-	StatusConfigError        int8 = -1 // 配置异常
+	// 任务方式
+	MethodTest               int8 = 1 // (系统) 测试任务
+	MethodReloadTaskList     int8 = 2 // (系统) 重新加载任务列表
+	MethodInitJobNextRunTime int8 = 3 // (系统) 初始化所有任务下一次时间
+
+	// 是否可编辑状态
+	EditableYes int8 = 1 // 可编辑
+	EditableNo  int8 = 2 // 不可编辑
+
+	// 运行状态
+	RunStatusRunning int8 = 1 // 运行中
+	RunStatusSuccess int8 = 2 // 已完成
+	RunStatusFailure int8 = 3 // 失败
+
+	// 状态
+	StatusDeleted            int8 = -1 // 删除
 	StatusPending            int8 = 1  // 待启用/下线
-	StatusEnabled            int8 = 2  // 已启用
+	StatusConfigError        int8 = 2  // 配置异常
+	StatusConfigExpired      int8 = 3  // 配置超时下线
+	StatusWorkerServiceError int8 = 4  // 下游服务异常
+	StatusEnabled            int8 = 10 // 已启用
+)
 
-	TypeCron                       uint8 = 1
-	TypeDuration                   uint8 = 2
-	TypeDurationRandom             uint8 = 3
-	TypeOneTimeJobStartImmediately uint8 = 4
-	TypeOneTimeJobStartDateTimes   uint8 = 5
-
-	MethodTest               uint8 = 0
-	MethodReloadTaskList     uint8 = 1
-	MethodInitJobNextRunTime uint8 = 2
+var (
+	TaskTypeMap = map[int8]string{
+		NotChoose:                      "全部",
+		TypeOneTimeJobStartImmediately: "立即执行",
+		TypeCron:                       "定时任务",
+		TypeDuration:                   "时间间隔",
+		TypeDurationRandom:             "随机时间间隔",
+		TypeOneTimeJobStartDateTimes:   "指定时间",
+	}
+	TaskStatusMap = map[int8]string{
+		NotChoose:                "全部",
+		StatusDeleted:            "删除",
+		StatusPending:            "待启用/下线",
+		StatusConfigError:        "配置异常",
+		StatusConfigExpired:      "配置自动超时下线",
+		StatusWorkerServiceError: "下游服务异常",
+		StatusEnabled:            "已启用",
+	}
 )
 
 func BuildSHA256(task GMTask) string {
