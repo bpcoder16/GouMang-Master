@@ -73,6 +73,12 @@ var (
 		TypeDurationRandom:             "随机时间间隔",
 		TypeOneTimeJobStartDateTimes:   "指定时间",
 	}
+	TaskMethodMap = map[int8]string{
+		NotChoose:                "全部",
+		MethodTest:               "测试任务",
+		MethodReloadTaskList:     "重新加载任务列表",
+		MethodInitJobNextRunTime: "初始化所有任务下一次时间",
+	}
 	TaskStatusMap = map[int8]string{
 		NotChoose:                "全部",
 		StatusDeleted:            "删除",
