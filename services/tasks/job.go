@@ -84,6 +84,21 @@ func getJobOptionList(ctx context.Context, taskUUID uuid.UUID, dbTask db.GMTask)
 	}
 }
 
+func updateDBTaskNextRunTime(ctx context.Context, job gocron.Job, dbTask db.GMTask) (err error) {
+	var nextRunTime time.Time
+	if nextRunTime, err = job.NextRun(); err != nil {
+		return
+	}
+	if nextRunTime.Before(time.Now().Add(-time.Second)) {
+		err = errors.New("nextRunTime is in the past")
+		return
+	}
+
+	dbTask.NextRunTime = nextRunTime.UnixNano() / int64(time.Millisecond)
+
+	return global.DefaultDB.WithContext(ctx).Save(&dbTask).Error
+}
+
 func CreateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error) {
 	var taskUUID uuid.UUID
 	taskUUID, err = isValidTaskUUID(ctx, dbTask.UUID)
@@ -108,21 +123,14 @@ func CreateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error
 		task,
 		getJobOptionList(ctx, taskUUID, dbTask)...,
 	)
+
 	if err != nil {
+		err = createOrUpdateJobErr
 		return
 	}
+	logit.Context(ctx).DebugW("Cron.CreateJob", "Created: "+dbTask.Title)
 
-	var nextRunTime time.Time
-	if nextRunTime, err = job.NextRun(); err != nil {
-		return
-	}
-
-	dbTask.NextRunTime = nextRunTime.UnixNano() / 1e6
-	dbTask.UpdatedAt = time.Now().UnixNano() / 1e6
-	err = global.DefaultDB.WithContext(ctx).Save(&dbTask).Error
-	if err == nil {
-		logit.Context(ctx).DebugW("Cron.CreateJob", "Created: "+dbTask.Title)
-	}
+	_ = updateDBTaskNextRunTime(ctx, job, dbTask)
 	return
 }
 
@@ -151,15 +159,21 @@ func UpdateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error
 		task,
 		getJobOptionList(ctx, taskUUID, dbTask)...,
 	)
-	if err == nil {
-		logit.Context(ctx).DebugW("Cron.UpdateJob", "Updated: "+dbTask.Title)
+
+	if err != nil {
+		err = createOrUpdateJobErr
+		return
 	}
+	logit.Context(ctx).DebugW("Cron.UpdateJob", "Updated: "+dbTask.Title)
+
+	_ = updateDBTaskNextRunTime(ctx, job, dbTask)
+
 	return
 }
 
 func RemoveJobForJob(ctx context.Context, job gocron.Job) (err error) {
 	err = cron.RemoveJob(job.ID())
-	logit.Context(ctx).DebugW("Cron.reloadTaskListTask", "Removed: "+job.Name())
+	logit.Context(ctx).DebugW("Cron.reloadTaskListTask.RemoveJobForJob", "Removed: "+job.Name())
 	return
 }
 
@@ -170,7 +184,7 @@ func RemoveJobForDBTask(ctx context.Context, dbTask db.GMTask) (err error) {
 		return
 	}
 	err = cron.RemoveJob(taskUUID)
-	logit.Context(ctx).DebugW("Cron.reloadTaskListTask", "Removed: "+dbTask.Title)
+	logit.Context(ctx).DebugW("Cron.reloadTaskListTask.RemoveJobForDBTask", "Removed: "+dbTask.Title)
 	return
 }
 

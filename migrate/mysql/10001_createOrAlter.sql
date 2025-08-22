@@ -6,8 +6,8 @@ CREATE TABLE `gm_nodes` (
     `port` int unsigned NOT NULL DEFAULT '0' COMMENT 'port',
     `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '备注',
     `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态',
-    `created_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '创建时间 (时间戳:毫秒)',
-    `updated_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '更新时间 (时间戳:毫秒)',
+    `created_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '创建时间 (时间戳:秒)',
+    `updated_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '更新时间 (时间戳:秒)',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uniq_title` (`title`),
     UNIQUE KEY `uniq_ip_port` (`ip`, `port`)
@@ -30,8 +30,8 @@ CREATE TABLE `gm_tasks` (
     `editable` tinyint NOT NULL DEFAULT '1' COMMENT '是否可编辑，1 可编辑 2 不可编辑',
     `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态',
     `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '错误信息',
-    `created_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '创建时间 (时间戳:毫秒)',
-    `updated_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '更新时间 (时间戳:毫秒)',
+    `created_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '创建时间 (时间戳:秒)',
+    `updated_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '更新时间 (时间戳:秒)',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uniq_title` (`title`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='任务配置表';
@@ -56,8 +56,8 @@ CREATE TABLE `gm_task_logs` (
     `started_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '开始时间 (时间戳:毫秒)',
     `ended_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '结束时间 (时间戳:毫秒)',
     `run_status` tinyint NOT NULL DEFAULT '1' COMMENT '运行状态',
-    `created_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '创建时间 (时间戳:毫秒)',
-    `updated_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '更新时间 (时间戳:毫秒)',
+    `created_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '创建时间 (时间戳:秒)',
+    `updated_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '更新时间 (时间戳:秒)',
     PRIMARY KEY (`id`),
     KEY `idx_task_id` (`task_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='任务日志表';
@@ -67,7 +67,7 @@ CREATE TABLE `gm_task_log_detail` (
     `id` bigint unsigned NOT NULL AUTO_INCREMENT,
     `task_log_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '任务日志 ID',
     `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '内容',
-    `created_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '创建时间 (时间戳:毫秒)',
+    `created_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '创建时间 (时间戳:秒)',
     PRIMARY KEY (`id`),
     KEY `idx_task_log_id` (`task_log_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='任务日志详情表';

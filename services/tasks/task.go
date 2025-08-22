@@ -7,7 +7,6 @@ import (
 	"goumang-master/global"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/bpcoder16/Chestnut/v2/contrib/cron"
 	"github.com/bpcoder16/Chestnut/v2/logit"
@@ -58,7 +57,6 @@ func loadTaskListTask(ctx context.Context, dbTaskList []db.GMTask, exceptUUID st
 		// 移除无效的任务
 		if _, isExist := dbTaskMap[job.ID().String()]; !isExist {
 			err := RemoveJobForJob(ctx, job)
-			logit.Context(ctx).DebugW("Cron.reloadTaskListTask", "Removed: "+job.Name())
 			if err != nil {
 				logit.Context(ctx).WarnW("Cron.reloadTaskListTask.RemoveJob.Err", err.Error())
 			}
@@ -118,7 +116,6 @@ func cancelErrJob(ctx context.Context, cancelErr error, task db.GMTask) error {
 	cancelFunc := func(status int8) error {
 		task.Status = status
 		task.ErrorMessage = cancelErr.Error()
-		task.UpdatedAt = time.Now().UnixNano() / 1e6
 		if err := global.DefaultDB.WithContext(ctx).Save(&task).Error; err != nil {
 			return err
 		}

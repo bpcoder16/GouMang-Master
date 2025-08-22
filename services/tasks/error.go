@@ -11,5 +11,7 @@ var (
 	notSupportedTaskTypeErr                   = errors.New("not supported task type")
 	notSupportedTaskMethodErr                 = errors.New("not supported task method")
 
+	createOrUpdateJobErr = errors.New("create or update job error")
+
 	dbTaskUUIDInvalidErr = errors.New("task uuid is invalid")
 )
