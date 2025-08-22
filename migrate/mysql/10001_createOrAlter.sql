@@ -33,6 +33,7 @@ CREATE TABLE `gm_tasks` (
     `created_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '创建时间 (时间戳:秒)',
     `updated_at` bigint unsigned NOT NULL DEFAULT '0' COMMENT '更新时间 (时间戳:秒)',
     PRIMARY KEY (`id`),
+    UNIQUE KEY `uniq_uuid` (`uuid`),
     UNIQUE KEY `uniq_title` (`title`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='任务配置表';
 

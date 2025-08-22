@@ -84,7 +84,7 @@ func getJobOptionList(ctx context.Context, taskUUID uuid.UUID, dbTask db.GMTask)
 	}
 }
 
-func updateDBTaskNextRunTime(ctx context.Context, job gocron.Job, dbTask db.GMTask) (err error) {
+func updateDBTaskNextRunTime(ctx context.Context, job gocron.Job, isSetEditableNo bool) (err error) {
 	var nextRunTime time.Time
 	if nextRunTime, err = job.NextRun(); err != nil {
 		return
@@ -94,9 +94,15 @@ func updateDBTaskNextRunTime(ctx context.Context, job gocron.Job, dbTask db.GMTa
 		return
 	}
 
-	dbTask.NextRunTime = nextRunTime.UnixNano() / int64(time.Millisecond)
-
-	return global.DefaultDB.WithContext(ctx).Save(&dbTask).Error
+	updateValues := map[string]any{
+		"next_run_time": nextRunTime.UnixNano() / int64(time.Millisecond),
+	}
+	if isSetEditableNo {
+		updateValues["editable"] = db.EditableNo
+	}
+	return global.DefaultDB.WithContext(ctx).Model(&db.GMTask{}).
+		Where("uuid = ?", job.ID().String()).
+		Updates(updateValues).Error
 }
 
 func CreateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error) {
@@ -130,7 +136,7 @@ func CreateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error
 	}
 	logit.Context(ctx).DebugW("Cron.CreateJob", "Created: "+dbTask.Title)
 
-	_ = updateDBTaskNextRunTime(ctx, job, dbTask)
+	_ = updateDBTaskNextRunTime(ctx, job, false)
 	return
 }
 
@@ -166,7 +172,7 @@ func UpdateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error
 	}
 	logit.Context(ctx).DebugW("Cron.UpdateJob", "Updated: "+dbTask.Title)
 
-	_ = updateDBTaskNextRunTime(ctx, job, dbTask)
+	_ = updateDBTaskNextRunTime(ctx, job, false)
 
 	return
 }

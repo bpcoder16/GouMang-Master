@@ -64,10 +64,12 @@ func beforeJobRunsSkipIfBeforeFuncErrorsFunc(ctx context.Context) func(jobID uui
 // Job 执行后执行
 func afterJobRunsFunc(ctx context.Context) func(jobID uuid.UUID, jobName string) {
 	return func(jobID uuid.UUID, jobName string) {
-		//var task db.GMTask
-		//if err := global.DefaultDB.WithContext(ctx).Where("uuid = ?", jobID.String()).First(&task).Error; err != nil {
-		//	return
-		//}
+		if job, err := GetJob(jobID.String()); err != nil {
+			return
+		} else {
+			_ = updateDBTaskNextRunTime(ctx, job, true)
+		}
+
 		//
 		//var logList []db.GMTaskLog
 		//if err := global.DefaultDB.WithContext(ctx).
@@ -88,19 +90,6 @@ func afterJobRunsFunc(ctx context.Context) func(jobID uuid.UUID, jobName string)
 		//	"updated_at": nowAt,
 		//})
 		//
-		//if job, err := GetJob(jobID.String()); err != nil {
-		//	return
-		//} else {
-		//	if nextRunTime, errN := job.NextRun(); errN != nil {
-		//		task.NextRunTime = 0
-		//	} else {
-		//		task.NextRunTime = nextRunTime.UnixNano() / 1e6
-		//	}
-		//	task.Editable = db.EditableNo
-		//	task.UpdatedAt = nowAt
-		//}
-		//
-		//global.DefaultDB.WithContext(ctx).Save(&task)
 	}
 }
 
