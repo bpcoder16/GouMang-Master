@@ -21,15 +21,30 @@ func (t *Task) Config(ctx *gin.Context) {
 		return
 	}
 
+	// 获取节点列表
+	nodes, err := t.getNodeList(ctx)
+	if err != nil {
+		returnErrJson(ctx, errorcode.ErrServiceException)
+		return
+	}
+
 	// 构建标签列表
 	tagList := buildTagList(tags)
 
 	// 构建任务方式列表
 	methodList := buildMethodList()
 
+	// 构建任务状态列表
+	statusList := buildStatusList()
+
+	// 构建节点列表
+	nodeList := buildNodeList(nodes)
+
 	returnSuccessJson(ctx, gin.H{
 		"tagList":    tagList,
 		"methodList": methodList,
+		"statusList": statusList,
+		"nodeList":   nodeList,
 	})
 }
 
@@ -47,6 +62,16 @@ func (t *Task) getTagList(ctx *gin.Context) (tagList []string, err error) {
 
 	// 按字母顺序排序
 	sort.Strings(tagList)
+	return
+}
+
+// getNodeList 获取节点列表
+func (t *Task) getNodeList(ctx *gin.Context) (nodeList []db.GMNode, err error) {
+	err = global.DefaultDB.WithContext(ctx).Model(&db.GMNode{}).Where("status != ?", db.StatusDeleted).Find(&nodeList).Error
+	if err != nil {
+		logit.Context(ctx).ErrorW("getNodeList.error", err)
+		return
+	}
 	return
 }
 
@@ -90,4 +115,46 @@ func buildMethodList() []map[string]any {
 	}
 
 	return methodList
+}
+
+// buildStatusList 构建任务状态列表
+func buildStatusList() []map[string]any {
+	// 按固定顺序定义任务状态
+	statusOrder := []int8{
+		db.NotChoose,
+		db.StatusPending,
+		db.StatusConfigError,
+		db.StatusConfigExpired,
+		db.StatusWorkerServiceError,
+		db.StatusEnabled,
+	}
+
+	statusList := make([]map[string]any, 0, len(statusOrder))
+
+	// 按固定顺序添加任务状态
+	for _, value := range statusOrder {
+		if name, exists := db.TaskStatusMap[value]; exists {
+			statusList = append(statusList, map[string]any{
+				"name":  name,
+				"value": value,
+			})
+		}
+	}
+
+	return statusList
+}
+
+// buildNodeList 构建节点列表
+func buildNodeList(nodes []db.GMNode) []map[string]any {
+	nodeList := make([]map[string]any, 0, len(nodes)+1)
+	nodeList = append(nodeList, map[string]any{
+		"name": "全部", "value": "",
+	})
+	for _, node := range nodes {
+		nodeList = append(nodeList, map[string]any{
+			"name":  node.Title,
+			"value": node.ID,
+		})
+	}
+	return nodeList
 }
