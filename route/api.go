@@ -11,6 +11,7 @@ func Api() gin.Router {
 
 	taskGroup := apiRouter.Group("/task")
 	{
+		taskGroup.GET("/list", (&controller.Task{}).List)
 		taskGroup.GET("/config", (&controller.Task{}).Config)
 	}
 
