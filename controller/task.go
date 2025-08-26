@@ -344,12 +344,12 @@ func (t *Task) Edit(ctx *gin.Context) {
 		}
 		return nil
 	}); errT != nil {
-		logit.Context(ctx).ErrorW("createTask.error", errT)
+		logit.Context(ctx).ErrorW("updateTask.error", errT)
 		returnErrJson(ctx, errorcode.ErrServiceException)
 		return
 	}
 
-	// 返回创建的任务信息
+	// 返回更新的任务信息
 	returnSuccessJson(ctx, gin.H{
 		"id":   task.ID,
 		"uuid": task.UUID,
@@ -471,6 +471,7 @@ func (t *Task) ImmediatelyRun(ctx *gin.Context) {
 		return
 	}
 
+	task.UUID = uuid.New().String()
 	task.Type = db.TypeOneTimeJobStartImmediately
 	_, err = tasks.CreateJob(ctx, global.DefaultDB.WithContext(ctx), task)
 	if err != nil {
