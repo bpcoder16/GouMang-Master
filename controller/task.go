@@ -370,6 +370,30 @@ func (t *Task) Detail(ctx *gin.Context) {
 	returnSuccessJson(ctx, taskShow)
 }
 
+func (t *Task) ImmediatelyRun(ctx *gin.Context) {
+	var req struct {
+		ID uint64 `json:"id" validate:"required"`
+	}
+	if err := paramsValidator(ctx, &req); err != nil {
+		return
+	}
+
+	// 检查任务是否存在且未删除
+	task, err := t.getTaskByID(ctx, req.ID)
+	if err != nil {
+		return
+	}
+
+	task.Type = db.TypeOneTimeJobStartImmediately
+	_, err = tasks.CreateJob(ctx, global.DefaultDB.WithContext(ctx), task)
+	if err != nil {
+		logit.Context(ctx).ErrorW("createJob.error", err)
+		returnErrJson(ctx, errorcode.ErrServiceException)
+		return
+	}
+	returnSuccessJson(ctx, gin.H{})
+}
+
 // Delete 删除任务
 func (t *Task) Delete(ctx *gin.Context) {
 	var req struct {
