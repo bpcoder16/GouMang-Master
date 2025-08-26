@@ -24,8 +24,12 @@ func (t *Task) Config(ctx *gin.Context) {
 	// 构建标签列表
 	tagList := buildTagList(tags)
 
+	// 构建任务方式列表
+	methodList := buildMethodList()
+
 	returnSuccessJson(ctx, gin.H{
-		"tagList": tagList,
+		"tagList":    tagList,
+		"methodList": methodList,
 	})
 }
 
@@ -61,4 +65,29 @@ func buildTagList(tags []string) []map[string]any {
 		})
 	}
 	return tagList
+}
+
+// buildMethodList 构建任务方式列表
+func buildMethodList() []map[string]any {
+	// 按固定顺序定义任务方式
+	methodOrder := []int8{
+		db.NotChoose,
+		db.MethodTest,
+		db.MethodReloadTaskList,
+		db.MethodInitJobNextRunTime,
+	}
+
+	methodList := make([]map[string]any, 0, len(methodOrder))
+
+	// 按固定顺序添加任务方式
+	for _, value := range methodOrder {
+		if name, exists := db.TaskMethodMap[value]; exists {
+			methodList = append(methodList, map[string]any{
+				"name":  name,
+				"value": value,
+			})
+		}
+	}
+
+	return methodList
 }
