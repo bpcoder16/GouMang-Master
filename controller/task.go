@@ -162,8 +162,18 @@ func (t *Task) Create(ctx *gin.Context) {
 	req.MethodParams = strings.TrimSpace(req.MethodParams)
 	req.NodeIDs = utils.RemoveDuplicates(req.NodeIDs)
 
+	if req.Tag == "NoTag" || req.Tag == "System" {
+		returnErrJson(ctx, errorcode.ErrParams, "标签不能设置为 NoTag Or System")
+		return
+	}
+
 	if len(req.Title) == 0 {
 		returnErrJson(ctx, errorcode.ErrParams, "任务标题不能为空")
+		return
+	}
+
+	if err := global.DefaultDB.WithContext(ctx).Where("title = ?", req.Title).First(&db.GMTask{}).Error; !errors.Is(err, gorm.ErrRecordNotFound) {
+		returnErrJson(ctx, errorcode.ErrParams, "任务标题已存在，不可重复")
 		return
 	}
 
@@ -242,8 +252,8 @@ func (t *Task) Create(ctx *gin.Context) {
 				TaskID: task.ID,
 			})
 		}
-		if err := tx.Create(&nodeTaskList).Error; err != nil {
-			return err
+		if len(nodeTaskList) > 0 {
+			return tx.Create(&nodeTaskList).Error
 		}
 		return nil
 	}); errT != nil {
@@ -271,6 +281,7 @@ func (t *Task) getTaskByID(ctx *gin.Context, id uint64) (task db.GMTask, err err
 		return
 	} else {
 		if task.UserID == 0 {
+			err = errors.New("当前任务不可操作")
 			returnErrJson(ctx, errorcode.ErrParams, "当前任务不可操作")
 			return
 		}
@@ -377,10 +388,14 @@ func (t *Task) Delete(ctx *gin.Context) {
 	// 在事务中删除任务和关联的节点关系
 	if errT := global.DefaultDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 软删除任务（设置状态为删除）
-		if errT := tx.Model(&db.GMTask{}).Where("id = ?", task.ID).Update("status", db.StatusDeleted).Error; errT != nil {
+		if errT := tx.Model(&db.GMTask{}).Where("id = ?", task.ID).Updates(map[string]any{
+			"status":        db.StatusDeleted,
+			"next_run_time": 0,
+		}).Error; errT != nil {
 			return errT
 		}
-		return tasks.RemoveJobForDBTask(ctx, task)
+		_ = tasks.RemoveJobForDBTask(ctx, task)
+		return nil
 	}); errT != nil {
 		logit.Context(ctx).ErrorW("deleteTask.error", errT)
 		returnErrJson(ctx, errorcode.ErrServiceException)
@@ -452,10 +467,14 @@ func (t *Task) Disable(ctx *gin.Context) {
 	// 更新任务状态为待启用/下线
 	if errT := global.DefaultDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 软删除任务（设置状态为删除）
-		if errT := tx.Model(&db.GMTask{}).Where("id = ?", req.ID).Update("status", db.StatusPending).Error; errT != nil {
+		if errT := tx.Model(&db.GMTask{}).Where("id = ?", req.ID).Updates(map[string]any{
+			"status":        db.StatusPending,
+			"next_run_time": 0,
+		}).Error; errT != nil {
 			return errT
 		}
-		return tasks.RemoveJobForDBTask(ctx, task)
+		_ = tasks.RemoveJobForDBTask(ctx, task)
+		return nil
 	}); errT != nil {
 		logit.Context(ctx).ErrorW("disableTask.error", errT)
 		returnErrJson(ctx, errorcode.ErrServiceException)
