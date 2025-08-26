@@ -14,6 +14,7 @@ func Api() gin.Router {
 		taskGroup.GET("/list", (&controller.Task{}).List)
 		taskGroup.GET("/config", (&controller.Task{}).Config)
 		taskGroup.POST("/create", (&controller.Task{}).Create)
+		taskGroup.POST("/edit", (&controller.Task{}).Edit)
 		taskGroup.GET("/detail", (&controller.Task{}).Detail)
 		taskGroup.POST("/immediately-run", (&controller.Task{}).ImmediatelyRun)
 		taskGroup.POST("/delete", (&controller.Task{}).Delete)

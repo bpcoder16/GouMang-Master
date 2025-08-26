@@ -149,12 +149,7 @@ type CreateTaskRequest struct {
 	NodeIDs      []uint64 `json:"nodeIDs"`                       // 节点ID列表
 }
 
-// Create 创建任务
-func (t *Task) Create(ctx *gin.Context) {
-	var req CreateTaskRequest
-	if err := paramsValidator(ctx, &req); err != nil {
-		return
-	}
+func (t *Task) createUpdateCheck(ctx *gin.Context, req *CreateTaskRequest) (err error) {
 	req.Title = strings.TrimSpace(req.Title)
 	req.Tag = strings.TrimSpace(req.Tag)
 	req.Desc = strings.TrimSpace(req.Desc)
@@ -163,29 +158,29 @@ func (t *Task) Create(ctx *gin.Context) {
 	req.NodeIDs = utils.RemoveDuplicates(req.NodeIDs)
 
 	if req.Tag == "NoTag" || req.Tag == "System" {
-		returnErrJson(ctx, errorcode.ErrParams, "标签不能设置为 NoTag Or System")
+		err = errors.New("标签不能设置为 NoTag Or System")
 		return
 	}
 
 	if len(req.Title) == 0 {
-		returnErrJson(ctx, errorcode.ErrParams, "任务标题不能为空")
+		err = errors.New("任务标题不能为空")
 		return
 	}
 
-	if err := global.DefaultDB.WithContext(ctx).Where("title = ?", req.Title).First(&db.GMTask{}).Error; !errors.Is(err, gorm.ErrRecordNotFound) {
-		returnErrJson(ctx, errorcode.ErrParams, "任务标题已存在，不可重复")
+	if errDB := global.DefaultDB.WithContext(ctx).Where("title = ?", req.Title).First(&db.GMTask{}).Error; !errors.Is(errDB, gorm.ErrRecordNotFound) {
+		err = errors.New("任务标题已存在，不可重复")
 		return
 	}
 
 	// 验证执行方式
 	if _, exists := db.TaskTypeMap[req.Type]; !exists || req.Type == db.NotChoose {
-		returnErrJson(ctx, errorcode.ErrParams, "无效的执行方式")
+		err = errors.New("无效的执行方式")
 		return
 	}
 
 	// 验证任务方式
 	if _, exists := db.TaskMethodMap[req.Method]; !exists || req.Method == db.NotChoose {
-		returnErrJson(ctx, errorcode.ErrParams, "无效的任务方式")
+		err = errors.New("无效的任务方式")
 		return
 	}
 
@@ -201,7 +196,38 @@ func (t *Task) Create(ctx *gin.Context) {
 		_, reqExpressionErr = tasks.IsValidOneTimeJobStartDateTimesExpression(ctx, req.Expression)
 	}
 	if reqExpressionErr != nil {
-		returnErrJson(ctx, errorcode.ErrParams, "无效的执行方式表达式")
+		err = errors.New("无效的执行方式表达式")
+		return
+	}
+
+	// 验证节点ID有效性
+	if len(req.NodeIDs) > 0 {
+		var validNodeCount int64
+		if errDB := global.DefaultDB.WithContext(ctx).Model(&db.GMNode{}).
+			Where("id IN ?", req.NodeIDs).
+			Count(&validNodeCount).Error; errDB != nil {
+			logit.Context(ctx).ErrorW("validateNodeIDs.error", errDB)
+			err = errDB
+			return
+		}
+		if int(validNodeCount) != len(req.NodeIDs) {
+			err = errors.New("存在无效的节点ID")
+			return
+		}
+	}
+
+	return
+}
+
+// Create 创建任务
+func (t *Task) Create(ctx *gin.Context) {
+	var req CreateTaskRequest
+	if err := paramsValidator(ctx, &req); err != nil {
+		return
+	}
+
+	if err := t.createUpdateCheck(ctx, &req); err != nil {
+		returnErrJson(ctx, errorcode.ErrParams, err.Error())
 		return
 	}
 
@@ -225,26 +251,87 @@ func (t *Task) Create(ctx *gin.Context) {
 	// 计算SHA256
 	task.SHA256 = db.BuildSHA256(task)
 
-	// 验证节点ID有效性
-	if len(req.NodeIDs) > 0 {
-		var validNodeCount int64
-		if err := global.DefaultDB.WithContext(ctx).Model(&db.GMNode{}).
-			Where("id IN ?", req.NodeIDs).
-			Count(&validNodeCount).Error; err != nil {
-			logit.Context(ctx).ErrorW("validateNodeIDs.error", err)
-			returnErrJson(ctx, errorcode.ErrServiceException)
-			return
-		}
-		if int(validNodeCount) != len(req.NodeIDs) {
-			returnErrJson(ctx, errorcode.ErrParams, "存在无效的节点ID")
-			return
-		}
-	}
-
 	if errT := global.DefaultDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&task).Error; err != nil {
 			return err
 		}
+		nodeTaskList := make([]db.GMNodesTasks, 0, len(req.NodeIDs))
+		for _, nodeID := range req.NodeIDs {
+			nodeTaskList = append(nodeTaskList, db.GMNodesTasks{
+				NodeID: nodeID,
+				TaskID: task.ID,
+			})
+		}
+		if len(nodeTaskList) > 0 {
+			return tx.Create(&nodeTaskList).Error
+		}
+		return nil
+	}); errT != nil {
+		logit.Context(ctx).ErrorW("createTask.error", errT)
+		returnErrJson(ctx, errorcode.ErrServiceException)
+		return
+	}
+
+	// 返回创建的任务信息
+	returnSuccessJson(ctx, gin.H{
+		"id":   task.ID,
+		"uuid": task.UUID,
+	})
+}
+
+type EditTaskRequest struct {
+	ID                uint64 `json:"id" binding:"required"`
+	CreateTaskRequest `json:",inline"`
+}
+
+func (t *Task) Edit(ctx *gin.Context) {
+	var req EditTaskRequest
+	if err := paramsValidator(ctx, &req); err != nil {
+		return
+	}
+
+	// 检查任务是否存在且未删除
+	task, err := t.getTaskByID(ctx, req.ID)
+	if err != nil {
+		return
+	}
+	if task.Editable == db.EditableNo {
+		returnErrJson(ctx, errorcode.ErrParams, "该任务不可编辑")
+		return
+	}
+	if task.Status != db.StatusEnabled {
+		returnErrJson(ctx, errorcode.ErrParams, "该任务当前状态不可编辑")
+		return
+	}
+
+	createTaskRequest := req.CreateTaskRequest
+	if errC := t.createUpdateCheck(ctx, &createTaskRequest); errC != nil {
+		returnErrJson(ctx, errorcode.ErrParams, errC.Error())
+		return
+	}
+
+	// 创建任务对象
+	task.Title = createTaskRequest.Title
+	task.Tag = createTaskRequest.Tag
+	task.Desc = createTaskRequest.Desc
+	task.Type = createTaskRequest.Type
+	task.Expression = createTaskRequest.Expression
+	task.Method = createTaskRequest.Method
+	task.MethodParams = createTaskRequest.MethodParams
+	task.NextRunTime = 0
+	task.ErrorMessage = ""
+	// 计算SHA256
+	task.SHA256 = db.BuildSHA256(task)
+
+	if errT := global.DefaultDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if errT := tx.Save(&task).Error; errT != nil {
+			return errT
+		}
+		if errT := tx.Where("task_id = ?", task.ID).
+			Delete(&db.GMNodesTasks{}).Error; errT != nil {
+			return errT
+		}
+
 		nodeTaskList := make([]db.GMNodesTasks, 0, len(req.NodeIDs))
 		for _, nodeID := range req.NodeIDs {
 			nodeTaskList = append(nodeTaskList, db.GMNodesTasks{
