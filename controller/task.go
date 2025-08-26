@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bpcoder16/Chestnut/v2/core/utils"
 	"github.com/bpcoder16/Chestnut/v2/logit"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -159,6 +160,7 @@ func (t *Task) Create(ctx *gin.Context) {
 	req.Desc = strings.TrimSpace(req.Desc)
 	req.Expression = strings.TrimSpace(req.Expression)
 	req.MethodParams = strings.TrimSpace(req.MethodParams)
+	req.NodeIDs = utils.RemoveDuplicates(req.NodeIDs)
 
 	if len(req.Title) == 0 {
 		returnErrJson(ctx, errorcode.ErrParams, "任务标题不能为空")
@@ -257,6 +259,201 @@ func (t *Task) Create(ctx *gin.Context) {
 		"id":   task.ID,
 		"uuid": task.UUID,
 	})
+}
+
+// Detail 获取任务详情
+func (t *Task) Detail(ctx *gin.Context) {
+	id := ctx.Param("id")
+	if id == "" {
+		returnErrJson(ctx, errorcode.ErrParams, "任务ID不能为空")
+		return
+	}
+
+	taskID, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		returnErrJson(ctx, errorcode.ErrParams, "无效的任务ID")
+		return
+	}
+
+	var task db.GMTask
+	if err := global.DefaultDB.WithContext(ctx).Where("id = ? AND status != ?", taskID, db.StatusDeleted).First(&task).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			returnErrJson(ctx, errorcode.ErrParams, "任务不存在")
+			return
+		}
+		logit.Context(ctx).ErrorW("getTaskDetail.error", err)
+		returnErrJson(ctx, errorcode.ErrServiceException)
+		return
+	}
+
+	// 获取关联的节点列表
+	var nodesTasks []db.GMNodesTasks
+	if err := global.DefaultDB.WithContext(ctx).Where("task_id = ?", taskID).Find(&nodesTasks).Error; err != nil {
+		logit.Context(ctx).ErrorW("getTaskNodes.error", err)
+		returnErrJson(ctx, errorcode.ErrServiceException)
+		return
+	}
+
+	nodeIDs := make([]uint64, 0, len(nodesTasks))
+	for _, nt := range nodesTasks {
+		nodeIDs = append(nodeIDs, nt.NodeID)
+	}
+
+	// 格式化时间
+	nextRunTimeStr := ""
+	if task.NextRunTime > 0 {
+		nextRunTimeStr = time.Unix(task.NextRunTime/1000, 0).Format("2006-01-02 15:04:05")
+	}
+
+	createdAtStr := ""
+	if task.CreatedAt > 0 {
+		createdAtStr = time.Unix(task.CreatedAt, 0).Format("2006-01-02 15:04:05")
+	}
+
+	updatedAtStr := ""
+	if task.UpdatedAt > 0 {
+		updatedAtStr = time.Unix(task.UpdatedAt, 0).Format("2006-01-02 15:04:05")
+	}
+
+	// 返回任务详情
+	returnSuccessJson(ctx, gin.H{
+		"id":           task.ID,
+		"uuid":         task.UUID,
+		"sha256":       task.SHA256,
+		"userID":       task.UserID,
+		"title":        task.Title,
+		"tag":          task.Tag,
+		"desc":         task.Desc,
+		"type":         task.Type,
+		"typeName":     db.TaskTypeMap[task.Type],
+		"expression":   task.Expression,
+		"method":       task.Method,
+		"methodName":   db.TaskMethodMap[task.Method],
+		"methodParams": task.MethodParams,
+		"nextRunTime":  nextRunTimeStr,
+		"editable":     task.Editable,
+		"status":       task.Status,
+		"statusName":   db.TaskStatusMap[task.Status],
+		"errorMessage": task.ErrorMessage,
+		"createdAt":    createdAtStr,
+		"updatedAt":    updatedAtStr,
+		"nodeIDs":      nodeIDs,
+	})
+}
+
+// Delete 删除任务
+func (t *Task) Delete(ctx *gin.Context) {
+	var req struct {
+		ID uint64 `json:"id" validate:"required"`
+	}
+	if err := paramsValidator(ctx, &req); err != nil {
+		return
+	}
+
+	// 检查任务是否存在且未删除
+	var task db.GMTask
+	if err := global.DefaultDB.WithContext(ctx).Where("id = ? AND status != ?", req.ID, db.StatusDeleted).First(&task).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			returnErrJson(ctx, errorcode.ErrParams, "任务不存在")
+			return
+		}
+		logit.Context(ctx).ErrorW("checkTaskExists.error", err)
+		returnErrJson(ctx, errorcode.ErrServiceException)
+		return
+	}
+
+	// 在事务中删除任务和关联的节点关系
+	if errT := global.DefaultDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 软删除任务（设置状态为删除）
+		if err := tx.Model(&db.GMTask{}).Where("id = ?", req.ID).Update("status", db.StatusDeleted).Error; err != nil {
+			return err
+		}
+		// // 删除任务与节点的关联关系
+		// if err := tx.Where("task_id = ?", taskID).Delete(&db.GMNodesTasks{}).Error; err != nil {
+		// 	return err
+		// }
+		return nil
+	}); errT != nil {
+		logit.Context(ctx).ErrorW("deleteTask.error", errT)
+		returnErrJson(ctx, errorcode.ErrServiceException)
+		return
+	}
+
+	returnSuccessJson(ctx, gin.H{})
+}
+
+// Enable 启用任务
+func (t *Task) Enable(ctx *gin.Context) {
+	var req struct {
+		ID uint64 `json:"id" validate:"required"`
+	}
+	if err := paramsValidator(ctx, &req); err != nil {
+		return
+	}
+
+	// 检查任务是否存在且未删除
+	var task db.GMTask
+	if err := global.DefaultDB.WithContext(ctx).Where("id = ? AND status != ?", req.ID, db.StatusDeleted).First(&task).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			returnErrJson(ctx, errorcode.ErrParams, "任务不存在")
+			return
+		}
+		logit.Context(ctx).ErrorW("checkTaskExists.error", err)
+		returnErrJson(ctx, errorcode.ErrServiceException)
+		return
+	}
+
+	// 检查任务是否已经是启用状态
+	if task.Status == db.StatusEnabled {
+		returnErrJson(ctx, errorcode.ErrParams, "任务已经是启用状态")
+		return
+	}
+
+	// 更新任务状态为启用
+	if err := global.DefaultDB.WithContext(ctx).Model(&db.GMTask{}).Where("id = ?", req.ID).Update("status", db.StatusEnabled).Error; err != nil {
+		logit.Context(ctx).ErrorW("enableTask.error", err)
+		returnErrJson(ctx, errorcode.ErrServiceException)
+		return
+	}
+
+	returnSuccessJson(ctx, gin.H{})
+}
+
+// Disable 下线任务
+func (t *Task) Disable(ctx *gin.Context) {
+	var req struct {
+		ID uint64 `json:"id" validate:"required"`
+	}
+	if err := paramsValidator(ctx, &req); err != nil {
+		return
+	}
+
+	// 检查任务是否存在且未删除
+	var task db.GMTask
+	if err := global.DefaultDB.WithContext(ctx).Where("id = ? AND status != ?", req.ID, db.StatusDeleted).First(&task).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			returnErrJson(ctx, errorcode.ErrParams, "任务不存在")
+			return
+		}
+		logit.Context(ctx).ErrorW("checkTaskExists.error", err)
+		returnErrJson(ctx, errorcode.ErrServiceException)
+		return
+	}
+
+	// 检查任务是否已经是待启用/下线状态
+	if task.Status != db.StatusEnabled {
+		returnErrJson(ctx, errorcode.ErrParams, "任务当前不是启用状态")
+		return
+	}
+
+	// 更新任务状态为待启用/下线
+	if err := global.DefaultDB.WithContext(ctx).Model(&db.GMTask{}).Where("id = ?", req.ID).Update("status", db.StatusPending).Error; err != nil {
+		logit.Context(ctx).ErrorW("disableTask.error", err)
+		returnErrJson(ctx, errorcode.ErrServiceException)
+		return
+	}
+
+	returnSuccessJson(ctx, gin.H{})
 }
 
 // Config 获取任务配置相关信息
