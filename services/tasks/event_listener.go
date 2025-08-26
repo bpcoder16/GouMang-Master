@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"context"
+	"goumang-master/global"
 
 	"github.com/bpcoder16/Chestnut/v2/logit"
 	"github.com/google/uuid"
@@ -67,7 +68,7 @@ func afterJobRunsFunc(ctx context.Context) func(jobID uuid.UUID, jobName string)
 		if job, err := GetJob(jobID.String()); err != nil {
 			return
 		} else {
-			_ = updateDBTaskNextRunTime(ctx, job, true)
+			_ = updateDBTaskNextRunTime(ctx, global.DefaultDB.WithContext(ctx), job, true)
 		}
 	}
 }
@@ -78,7 +79,7 @@ func afterJobRunsWithErrorFunc(ctx context.Context) func(jobID uuid.UUID, jobNam
 		if job, errJ := GetJob(jobID.String()); errJ != nil {
 			return
 		} else {
-			_ = updateDBTaskNextRunTime(ctx, job, false)
+			_ = updateDBTaskNextRunTime(ctx, global.DefaultDB.WithContext(ctx), job, false)
 		}
 		// TODO 修改错误日志
 		logit.Context(ctx).ErrorW("AfterJobRunsWithError.jobID", jobID, "jobName", jobName, "error", err)

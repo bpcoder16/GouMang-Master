@@ -37,7 +37,7 @@ func initJobNextRunTime() (task gocron.Task) {
 	task = gocron.NewTask(func(ctx context.Context) (err error) {
 		jobList := cron.Jobs()
 		for _, job := range jobList {
-			_ = updateDBTaskNextRunTime(ctx, job, false)
+			_ = updateDBTaskNextRunTime(ctx, global.DefaultDB.WithContext(ctx), job, false)
 		}
 		return
 	})
@@ -90,7 +90,7 @@ func loadTaskListTask(ctx context.Context, dbTaskList []db.GMTask, exceptUUID st
 	for _, dbTask := range dbTaskMap {
 		// 增加新任务
 		if jobTmp, isExist := jobMap[dbTask.UUID]; !isExist {
-			_, err := CreateJob(ctx, dbTask)
+			_, err := CreateJob(ctx, global.DefaultDB.WithContext(ctx), dbTask)
 			if err = cancelErrJob(ctx, err, dbTask); err != nil {
 				logit.Context(ctx).WarnW("Cron.reloadTaskListTask.cancelErrJob.Err", err.Error())
 			}
@@ -109,7 +109,7 @@ func loadTaskListTask(ctx context.Context, dbTaskList []db.GMTask, exceptUUID st
 				continue
 			}
 
-			_, err := UpdateJob(ctx, dbTask)
+			_, err := UpdateJob(ctx, global.DefaultDB.WithContext(ctx), dbTask)
 			if err = cancelErrJob(ctx, err, dbTask); err != nil {
 				logit.Context(ctx).WarnW("Cron.reloadTaskListTask.cancelErrJob.Err", err.Error())
 			}

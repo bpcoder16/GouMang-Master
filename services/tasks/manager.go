@@ -16,7 +16,7 @@ func InitJobs(ctx context.Context) {
 	}
 
 	loadTaskListTask(ctx, dbTaskList, "")
-	_, _ = CreateJob(ctx, db.GMTask{
+	_, _ = CreateJob(ctx, global.DefaultDB.WithContext(ctx), db.GMTask{
 		UUID:   uuid.New().String(),
 		SHA256: "Immediately",
 		Title:  "initJobNextRunTime",

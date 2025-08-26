@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"goumang-master/db"
-	"goumang-master/global"
 	"strconv"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/bpcoder16/Chestnut/v2/logit"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 func getJobDefinition(ctx context.Context, dbTask db.GMTask) (jobDefinition gocron.JobDefinition, err error) {
@@ -84,7 +84,7 @@ func getJobOptionList(ctx context.Context, taskUUID uuid.UUID, dbTask db.GMTask)
 	}
 }
 
-func updateDBTaskNextRunTime(ctx context.Context, job gocron.Job, isSetEditableNo bool) (err error) {
+func updateDBTaskNextRunTime(_ context.Context, gormDB *gorm.DB, job gocron.Job, isSetEditableNo bool) (err error) {
 	var nextRunTime time.Time
 	if nextRunTime, err = job.NextRun(); err != nil {
 		return
@@ -100,12 +100,12 @@ func updateDBTaskNextRunTime(ctx context.Context, job gocron.Job, isSetEditableN
 	if isSetEditableNo {
 		updateValues["editable"] = db.EditableNo
 	}
-	return global.DefaultDB.WithContext(ctx).Model(&db.GMTask{}).
+	return gormDB.Model(&db.GMTask{}).
 		Where("uuid = ?", job.ID().String()).
 		Updates(updateValues).Error
 }
 
-func CreateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error) {
+func CreateJob(ctx context.Context, gormDB *gorm.DB, dbTask db.GMTask) (job gocron.Job, err error) {
 	var taskUUID uuid.UUID
 	taskUUID, err = isValidTaskUUID(ctx, dbTask.UUID)
 	if err != nil {
@@ -136,11 +136,11 @@ func CreateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error
 	}
 	logit.Context(ctx).DebugW("Cron.CreateJob", "Created: "+dbTask.Title)
 
-	_ = updateDBTaskNextRunTime(ctx, job, false)
+	_ = updateDBTaskNextRunTime(ctx, gormDB, job, false)
 	return
 }
 
-func UpdateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error) {
+func UpdateJob(ctx context.Context, gormDB *gorm.DB, dbTask db.GMTask) (job gocron.Job, err error) {
 	var taskUUID uuid.UUID
 	taskUUID, err = isValidTaskUUID(ctx, dbTask.UUID)
 	if err != nil {
@@ -172,7 +172,7 @@ func UpdateJob(ctx context.Context, dbTask db.GMTask) (job gocron.Job, err error
 	}
 	logit.Context(ctx).DebugW("Cron.UpdateJob", "Updated: "+dbTask.Title)
 
-	_ = updateDBTaskNextRunTime(ctx, job, false)
+	_ = updateDBTaskNextRunTime(ctx, gormDB, job, false)
 
 	return
 }
