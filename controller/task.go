@@ -4,12 +4,16 @@ import (
 	"goumang-master/db"
 	"goumang-master/errorcode"
 	"goumang-master/global"
+	"goumang-master/services/tasks"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bpcoder16/Chestnut/v2/logit"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type Task struct{}
@@ -39,6 +43,7 @@ func (t *Task) List(ctx *gin.Context) {
 	query := global.DefaultDB.WithContext(ctx).Model(&db.GMTask{}).Where("status != ?", db.StatusDeleted)
 
 	// 添加条件查询
+	title = strings.TrimSpace(title)
 	if title != "" {
 		query = query.Where("title LIKE ?", "%"+title+"%")
 	}
@@ -131,6 +136,129 @@ func (t *Task) List(ctx *gin.Context) {
 	})
 }
 
+// CreateTaskRequest 创建任务请求参数
+type CreateTaskRequest struct {
+	Title        string   `json:"title" binding:"required"`      // 任务标题
+	Tag          string   `json:"tag"`                           // 标签
+	Desc         string   `json:"desc"`                          // 任务描述
+	Type         int8     `json:"type" binding:"required"`       // 执行方式
+	Expression   string   `json:"expression" binding:"required"` // 执行方式表达式
+	Method       int8     `json:"method" binding:"required"`     // 任务方式
+	MethodParams string   `json:"methodParams"`                  // 任务方式参数
+	NodeIDs      []uint64 `json:"nodeIDs"`                       // 节点ID列表
+}
+
+// Create 创建任务
+func (t *Task) Create(ctx *gin.Context) {
+	var req CreateTaskRequest
+	if err := paramsValidator(ctx, &req); err != nil {
+		return
+	}
+	req.Title = strings.TrimSpace(req.Title)
+	req.Tag = strings.TrimSpace(req.Tag)
+	req.Desc = strings.TrimSpace(req.Desc)
+	req.Expression = strings.TrimSpace(req.Expression)
+	req.MethodParams = strings.TrimSpace(req.MethodParams)
+
+	if len(req.Title) == 0 {
+		returnErrJson(ctx, errorcode.ErrParams, "任务标题不能为空")
+		return
+	}
+
+	// 验证执行方式
+	if _, exists := db.TaskTypeMap[req.Type]; !exists || req.Type == db.NotChoose {
+		returnErrJson(ctx, errorcode.ErrParams, "无效的执行方式")
+		return
+	}
+
+	// 验证任务方式
+	if _, exists := db.TaskMethodMap[req.Method]; !exists || req.Method == db.NotChoose {
+		returnErrJson(ctx, errorcode.ErrParams, "无效的任务方式")
+		return
+	}
+
+	var reqExpressionErr error
+	switch req.Type {
+	case db.TypeCron:
+		reqExpressionErr = tasks.IsValidCrontabExpression(ctx, req.Expression)
+	case db.TypeDuration:
+		_, reqExpressionErr = tasks.IsValidDurationExpression(ctx, req.Expression)
+	case db.TypeDurationRandom:
+		_, _, reqExpressionErr = tasks.IsValidDurationRandomExpression(ctx, req.Expression)
+	case db.TypeOneTimeJobStartDateTimes:
+		_, reqExpressionErr = tasks.IsValidOneTimeJobStartDateTimesExpression(ctx, req.Expression)
+	}
+	if reqExpressionErr != nil {
+		returnErrJson(ctx, errorcode.ErrParams, "无效的执行方式表达式")
+		return
+	}
+
+	// 生成UUID
+	taskUUID := uuid.New().String()
+
+	// 创建任务对象
+	task := db.GMTask{
+		UUID:         taskUUID,
+		UserID:       1, // 后续增加 UserID
+		Title:        req.Title,
+		Tag:          req.Tag,
+		Desc:         req.Desc,
+		Type:         req.Type,
+		Expression:   req.Expression,
+		Method:       req.Method,
+		MethodParams: req.MethodParams,
+		NextRunTime:  0, // 初始为0，后续计算
+		Editable:     db.EditableYes,
+		Status:       db.StatusPending,
+		ErrorMessage: "",
+	}
+
+	// 验证节点ID有效性
+	if len(req.NodeIDs) > 0 {
+		var validNodeCount int64
+		if err := global.DefaultDB.WithContext(ctx).Model(&db.GMNode{}).
+			Where("id IN ?", req.NodeIDs).
+			Count(&validNodeCount).Error; err != nil {
+			logit.Context(ctx).ErrorW("validateNodeIDs.error", err)
+			returnErrJson(ctx, errorcode.ErrServiceException)
+			return
+		}
+		if int(validNodeCount) != len(req.NodeIDs) {
+			returnErrJson(ctx, errorcode.ErrParams, "存在无效的节点ID")
+			return
+		}
+	}
+
+	// 计算SHA256
+	task.SHA256 = db.BuildSHA256(task)
+
+	if errT := global.DefaultDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&task).Error; err != nil {
+			return err
+		}
+		for _, nodeID := range req.NodeIDs {
+			nodeTask := db.GMNodesTasks{
+				NodeID: nodeID,
+				TaskID: task.ID,
+			}
+			if err := tx.Create(&nodeTask).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}); errT != nil {
+		logit.Context(ctx).ErrorW("createTask.error", errT)
+		returnErrJson(ctx, errorcode.ErrServiceException)
+		return
+	}
+
+	// 返回创建的任务信息
+	returnSuccessJson(ctx, gin.H{
+		"id":   task.ID,
+		"uuid": task.UUID,
+	})
+}
+
 // Config 获取任务配置相关信息
 func (t *Task) Config(ctx *gin.Context) {
 	// 获取标签列表
@@ -150,6 +278,9 @@ func (t *Task) Config(ctx *gin.Context) {
 	// 构建标签列表
 	tagList := buildTagList(tags)
 
+	// 构建执行方式列表
+	typeList := buildTypeList()
+
 	// 构建任务方式列表
 	methodList := buildMethodList()
 
@@ -161,6 +292,7 @@ func (t *Task) Config(ctx *gin.Context) {
 
 	returnSuccessJson(ctx, gin.H{
 		"tagList":    tagList,
+		"typeList":   typeList,
 		"methodList": methodList,
 		"statusList": statusList,
 		"nodeList":   nodeList,
@@ -207,6 +339,30 @@ func buildTagList(tags []string) []map[string]any {
 		})
 	}
 	return tagList
+}
+
+// buildTypeList 构建执行方式列表
+func buildTypeList() []map[string]any {
+	typeList := make([]map[string]any, 0, len(db.TaskTypeMap))
+
+	// 按照预定义顺序添加执行方式
+	typeOrder := []int8{
+		db.TypeCron,
+		db.TypeDuration,
+		db.TypeDurationRandom,
+		db.TypeOneTimeJobStartDateTimes,
+	}
+
+	for _, typeValue := range typeOrder {
+		if typeName, exists := db.TaskTypeMap[typeValue]; exists {
+			typeList = append(typeList, map[string]any{
+				"name":  typeName,
+				"value": typeValue,
+			})
+		}
+	}
+
+	return typeList
 }
 
 // buildMethodList 构建任务方式列表

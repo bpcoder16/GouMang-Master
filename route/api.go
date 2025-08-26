@@ -13,6 +13,7 @@ func Api() gin.Router {
 	{
 		taskGroup.GET("/list", (&controller.Task{}).List)
 		taskGroup.GET("/config", (&controller.Task{}).Config)
+		taskGroup.POST("/create", (&controller.Task{}).Create)
 	}
 
 	return apiRouter
