@@ -299,7 +299,7 @@ func (t *Task) Edit(ctx *gin.Context) {
 		returnErrJson(ctx, errorcode.ErrParams, "该任务不可编辑")
 		return
 	}
-	if task.Status != db.StatusEnabled {
+	if task.Status == db.StatusEnabled {
 		returnErrJson(ctx, errorcode.ErrParams, "该任务当前状态不可编辑")
 		return
 	}
