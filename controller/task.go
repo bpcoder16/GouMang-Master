@@ -167,7 +167,8 @@ func (t *Task) createUpdateCheck(ctx *gin.Context, req *CreateTaskRequest) (err 
 		return
 	}
 
-	if errDB := global.DefaultDB.WithContext(ctx).Where("title = ?", req.Title).First(&db.GMTask{}).Error; !errors.Is(errDB, gorm.ErrRecordNotFound) {
+	if errDB := global.DefaultDB.WithContext(ctx).Where("title = ? and status != ?", req.Title, db.StatusDeleted).
+		First(&db.GMTask{}).Error; !errors.Is(errDB, gorm.ErrRecordNotFound) {
 		err = errors.New("任务标题已存在，不可重复")
 		return
 	}
