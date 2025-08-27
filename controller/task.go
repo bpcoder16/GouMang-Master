@@ -293,6 +293,7 @@ func (t *Task) Edit(ctx *gin.Context) {
 	// 检查任务是否存在且未删除
 	task, err := t.getTaskByID(ctx, req.ID)
 	if err != nil {
+		returnErrJson(ctx, errorcode.ErrParams, err.Error())
 		return
 	}
 	if task.Editable == db.EditableNo {
@@ -360,16 +361,14 @@ func (t *Task) getTaskByID(ctx *gin.Context, id uint64) (task db.GMTask, err err
 	err = global.DefaultDB.WithContext(ctx).Where("id = ? AND status != ?", id, db.StatusDeleted).First(&task).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			returnErrJson(ctx, errorcode.ErrParams, "任务不存在")
+			err = errors.New("任务不存在")
 			return
 		}
 		logit.Context(ctx).ErrorW("getTaskByID.error", err)
-		returnErrJson(ctx, errorcode.ErrServiceException)
 		return
 	} else {
 		if task.UserID == 0 {
 			err = errors.New("当前任务不可操作")
-			returnErrJson(ctx, errorcode.ErrParams, "当前任务不可操作")
 			return
 		}
 	}
@@ -435,6 +434,7 @@ func (t *Task) Detail(ctx *gin.Context) {
 	var task db.GMTask
 	task, err = t.getTaskByID(ctx, taskID)
 	if err != nil {
+		returnErrJson(ctx, errorcode.ErrParams, err.Error())
 		return
 	}
 
@@ -468,6 +468,7 @@ func (t *Task) ImmediatelyRun(ctx *gin.Context) {
 	// 检查任务是否存在且未删除
 	task, err := t.getTaskByID(ctx, req.ID)
 	if err != nil {
+		returnErrJson(ctx, errorcode.ErrParams, err.Error())
 		return
 	}
 
@@ -494,6 +495,7 @@ func (t *Task) Delete(ctx *gin.Context) {
 	// 检查任务是否存在且未删除
 	task, err := t.getTaskByID(ctx, req.ID)
 	if err != nil {
+		returnErrJson(ctx, errorcode.ErrParams, err.Error())
 		return
 	}
 
@@ -529,6 +531,7 @@ func (t *Task) Enable(ctx *gin.Context) {
 	// 检查任务是否存在且未删除
 	task, err := t.getTaskByID(ctx, req.ID)
 	if err != nil {
+		returnErrJson(ctx, errorcode.ErrParams, err.Error())
 		return
 	}
 
@@ -567,6 +570,7 @@ func (t *Task) Disable(ctx *gin.Context) {
 	// 检查任务是否存在且未删除
 	task, err := t.getTaskByID(ctx, req.ID)
 	if err != nil {
+		returnErrJson(ctx, errorcode.ErrParams, err.Error())
 		return
 	}
 

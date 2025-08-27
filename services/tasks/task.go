@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/bpcoder16/Chestnut/v2/contrib/cron"
-	"github.com/bpcoder16/Chestnut/v2/core/utils"
 	"github.com/bpcoder16/Chestnut/v2/logit"
 	"github.com/go-co-op/gocron/v2"
 )
@@ -47,12 +46,12 @@ func initJobNextRunTime() (task gocron.Task) {
 func testTask(masterTask db.GMTask) (task gocron.Task) {
 	task = gocron.NewTask(func(ctx context.Context) (err error) {
 		logit.Context(ctx).DebugW("Cron.testTask", masterTask.Title+".Run")
-		switch utils.RandIntN(3) {
-		case 1:
-			err = errors.New("test")
-		case 2:
-			panic("test")
-		}
+		//switch utils.RandIntN(3) {
+		//case 1:
+		//	err = errors.New("test")
+		//case 2:
+		//	panic("test")
+		//}
 		return
 	})
 	return
