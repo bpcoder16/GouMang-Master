@@ -316,10 +316,21 @@ func (n *Node) Delete(ctx *gin.Context) {
 // GetNodeTasks 获取使用指定节点的任务列表
 func (n *Node) GetNodeTasks(ctx *gin.Context) {
 	idStr := ctx.Query("id")
+	page := ctx.DefaultQuery("page", "1")
+	pageSize := ctx.DefaultQuery("pageSize", "10")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		returnErrJson(ctx, errorcode.ErrParams, "无效的节点ID")
 		return
+	}
+
+	// 参数验证
+	var pageInt, pageSizeInt int
+	if pageInt, err = strconv.Atoi(page); err != nil || pageInt < 1 {
+		pageInt = 1
+	}
+	if pageSizeInt, err = strconv.Atoi(pageSize); err != nil || pageSizeInt < 1 || pageSizeInt > 100 {
+		pageSizeInt = 10
 	}
 
 	// 检查节点是否存在
@@ -331,9 +342,11 @@ func (n *Node) GetNodeTasks(ctx *gin.Context) {
 
 	// 获取使用该节点的任务列表
 	var tasks []db.GMTask
+	offset := (pageInt - 1) * pageSizeInt
 	if err = global.DefaultDB.WithContext(ctx).
 		Joins("JOIN gm_nodes_tasks ON gm_tasks.id = gm_nodes_tasks.task_id").
 		Where("gm_nodes_tasks.node_id = ? AND gm_tasks.status != ?", id, db.StatusDeleted).
+		Offset(offset).Limit(pageSizeInt).Order("gm_tasks.created_at ASC").
 		Find(&tasks).Error; err != nil {
 		logit.Context(ctx).ErrorW("getNodeTasks.findTasks.error", err)
 		returnErrJson(ctx, errorcode.ErrServiceException)
