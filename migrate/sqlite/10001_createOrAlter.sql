@@ -7,9 +7,7 @@ CREATE TABLE `gm_nodes` (
     `remark` TEXT NOT NULL DEFAULT '',
     `status` INTEGER NOT NULL DEFAULT 1,
     `created_at` INTEGER NOT NULL DEFAULT 0,
-    `updated_at` INTEGER NOT NULL DEFAULT 0,
-    CONSTRAINT `uniq_title` UNIQUE (`title`),
-    CONSTRAINT `uniq_ip_port` UNIQUE (`ip`, `port`)
+    `updated_at` INTEGER NOT NULL DEFAULT 0
 );
 
 -- 创建 gm_tasks 任务配置表
@@ -31,8 +29,7 @@ CREATE TABLE `gm_tasks` (
     `error_message` TEXT NOT NULL DEFAULT '',
     `created_at` INTEGER NOT NULL DEFAULT 0,
     `updated_at` INTEGER NOT NULL DEFAULT 0,
-    CONSTRAINT `uniq_uuid` UNIQUE (`uuid`),
-    CONSTRAINT `uniq_title` UNIQUE (`title`)
+    CONSTRAINT `uniq_uuid` UNIQUE (`uuid`)
 );
 
 -- 创建 gm_nodes_tasks 节点配置表

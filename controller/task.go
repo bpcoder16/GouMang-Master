@@ -97,38 +97,7 @@ func (t *Task) List(ctx *gin.Context) {
 	// 构建返回数据
 	taskList := make([]map[string]any, 0, len(dbTasks))
 	for _, task := range dbTasks {
-		// 格式化下次运行时间
-		var nextRunTimeStr string
-		if task.NextRunTime > 0 {
-			nextRunTimeStr = time.Unix(0, task.NextRunTime*int64(time.Millisecond)).Format(time.DateTime)
-		} else {
-			nextRunTimeStr = ""
-		}
-
-		// 格式化创建时间和更新时间
-		createdAtStr := time.Unix(task.CreatedAt, 0).Format(time.DateTime)
-		updatedAtStr := time.Unix(task.UpdatedAt, 0).Format(time.DateTime)
-
-		taskList = append(taskList, map[string]any{
-			"id":           task.ID,
-			"uuid":         task.UUID,
-			"title":        task.Title,
-			"tag":          task.Tag,
-			"desc":         task.Desc,
-			"type":         task.Type,
-			"typeName":     db.TaskTypeMap[task.Type],
-			"expression":   task.Expression,
-			"method":       task.Method,
-			"methodName":   db.TaskMethodMap[task.Method],
-			"methodParams": task.MethodParams,
-			"nextRunTime":  nextRunTimeStr,
-			"editable":     task.Editable,
-			"status":       task.Status,
-			"statusName":   db.TaskStatusMap[task.Status],
-			"errorMessage": task.ErrorMessage,
-			"createdAt":    createdAtStr,
-			"updatedAt":    updatedAtStr,
-		})
+		taskList = append(taskList, buildShowTask(task, []uint64{}))
 	}
 
 	returnSuccessJson(ctx, gin.H{
@@ -149,7 +118,7 @@ type CreateTaskRequest struct {
 	NodeIDs      []uint64 `json:"nodeIDs"`                       // 节点ID列表
 }
 
-func (t *Task) createUpdateCheck(ctx *gin.Context, req *CreateTaskRequest) (err error) {
+func (t *Task) createUpdateCheck(ctx *gin.Context, req *CreateTaskRequest, excludeId uint64) (err error) {
 	req.Title = strings.TrimSpace(req.Title)
 	req.Tag = strings.TrimSpace(req.Tag)
 	req.Desc = strings.TrimSpace(req.Desc)
@@ -167,7 +136,7 @@ func (t *Task) createUpdateCheck(ctx *gin.Context, req *CreateTaskRequest) (err 
 		return
 	}
 
-	if errDB := global.DefaultDB.WithContext(ctx).Where("title = ? and status != ?", req.Title, db.StatusDeleted).
+	if errDB := global.DefaultDB.WithContext(ctx).Where("title = ? and status != ? and id != ?", req.Title, db.StatusDeleted, excludeId).
 		First(&db.GMTask{}).Error; !errors.Is(errDB, gorm.ErrRecordNotFound) {
 		err = errors.New("任务标题已存在，不可重复")
 		return
@@ -227,7 +196,7 @@ func (t *Task) Create(ctx *gin.Context) {
 		return
 	}
 
-	if err := t.createUpdateCheck(ctx, &req); err != nil {
+	if err := t.createUpdateCheck(ctx, &req, 0); err != nil {
 		returnErrJson(ctx, errorcode.ErrParams, err.Error())
 		return
 	}
@@ -307,7 +276,7 @@ func (t *Task) Edit(ctx *gin.Context) {
 	}
 
 	createTaskRequest := req.CreateTaskRequest
-	if errC := t.createUpdateCheck(ctx, &createTaskRequest); errC != nil {
+	if errC := t.createUpdateCheck(ctx, &createTaskRequest, req.ID); errC != nil {
 		returnErrJson(ctx, errorcode.ErrParams, errC.Error())
 		return
 	}
@@ -376,7 +345,7 @@ func (t *Task) getTaskByID(ctx *gin.Context, id uint64) (task db.GMTask, err err
 	return
 }
 
-func (t *Task) buildShowTask(task db.GMTask, nodeIDs []uint64) map[string]any {
+func buildShowTask(task db.GMTask, nodeIDs []uint64) map[string]any {
 	// 格式化时间
 	nextRunTimeStr := ""
 	if task.NextRunTime > 0 {
@@ -396,7 +365,6 @@ func (t *Task) buildShowTask(task db.GMTask, nodeIDs []uint64) map[string]any {
 	return map[string]any{
 		"id":           task.ID,
 		"uuid":         task.UUID,
-		"sha256":       task.SHA256,
 		"userID":       task.UserID,
 		"title":        task.Title,
 		"tag":          task.Tag,
@@ -452,7 +420,7 @@ func (t *Task) Detail(ctx *gin.Context) {
 		nodeIDs = append(nodeIDs, nt.NodeID)
 	}
 
-	taskShow := t.buildShowTask(task, nodeIDs)
+	taskShow := buildShowTask(task, nodeIDs)
 
 	// 返回任务详情
 	returnSuccessJson(ctx, taskShow)

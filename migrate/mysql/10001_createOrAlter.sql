@@ -8,9 +8,7 @@ CREATE TABLE `gm_nodes` (
     `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态',
     `created_at` bigint NOT NULL DEFAULT '0' COMMENT '创建时间 (时间戳:秒)',
     `updated_at` bigint NOT NULL DEFAULT '0' COMMENT '更新时间 (时间戳:秒)',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uniq_title` (`title`),
-    UNIQUE KEY `uniq_ip_port` (`ip`, `port`)
+    PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='节点配置表';
 
 -- 创建 gm_tasks 任务配置表
@@ -33,8 +31,7 @@ CREATE TABLE `gm_tasks` (
     `created_at` bigint NOT NULL DEFAULT '0' COMMENT '创建时间 (时间戳:秒)',
     `updated_at` bigint NOT NULL DEFAULT '0' COMMENT '更新时间 (时间戳:秒)',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uniq_uuid` (`uuid`),
-    UNIQUE KEY `uniq_title` (`title`)
+    UNIQUE KEY `uniq_uuid` (`uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='任务配置表';
 
 -- 创建 gm_nodes_tasks 节点&任务关联表
