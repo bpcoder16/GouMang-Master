@@ -29,7 +29,6 @@ func Api() gin.Router {
 		nodeGroup.POST("/edit", (&controller.Node{}).Edit)
 		nodeGroup.GET("/detail", (&controller.Node{}).Detail)
 		nodeGroup.POST("/delete", (&controller.Node{}).Delete)
-		nodeGroup.GET("/tasks", (&controller.Node{}).GetNodeTasks)
 	}
 
 	return apiRouter
