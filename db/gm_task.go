@@ -42,9 +42,10 @@ const (
 	TypeOneTimeJobStartDateTimes   int8 = 4  // 指定时间 [2025-08-22 10:00:00,2025-09-22 22:00:00]
 
 	// 任务方式
-	MethodTest               int8 = 1 // (系统) 测试任务
-	MethodReloadTaskList     int8 = 2 // (系统) 重新加载任务列表
-	MethodInitJobNextRunTime int8 = 3 // (系统) 初始化所有任务下一次时间
+	MethodTest               int8 = -1 // (系统) 测试任务
+	MethodReloadTaskList     int8 = -2 // (系统) 重新加载任务列表
+	MethodInitJobNextRunTime int8 = -3 // (系统) 初始化所有任务下一次时间
+	MethodShell              int8 = 0  // shell 命令
 
 	// 是否可编辑状态
 	EditableYes int8 = 1 // 可编辑
